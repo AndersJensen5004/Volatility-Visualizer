@@ -3,16 +3,39 @@ import pandas as pd
 import numpy as np
 import matplotlib.pyplot as plt
 import yfinance as yf
-from datetime import datetime, timedelta
+import PySimpleGUI as sg
+from datetime import datetime, timedelta\
+
 
 
 def main():
+    test_window()
     year = datetime.now().year
     month = datetime.now().month
     third_friday = third_friday_of_month(year, month)
     print(third_friday)
         
     print("test")
+    
+def test_window(): 
+    layout = [
+        [sg.Text("Enter your text:")],
+        [sg.InputText()],
+        [sg.Button("Submit"), sg.Button("Exit")],
+        [sg.Text(size=(40, 1), key="-OUTPUT-")]
+    ]
+
+    window = sg.Window("Simple Text Input", layout)
+
+    while True:
+        event, values = window.read()
+        if event == sg.WINDOW_CLOSED or event == "Exit":
+            break
+        if event == "Submit":
+            text = values[0]
+            window["-OUTPUT-"].update(f"You entered: {text}")
+
+    window.close()
 
 
 
