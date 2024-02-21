@@ -1,29 +1,67 @@
 # Imports
 import pandas as pd
 import numpy as np
+import os
+import sys
+import time
 import matplotlib.pyplot as plt
 import yfinance as yf
 from datetime import datetime, timedelta
 from blessed import Terminal
 
-# Initialize blessed terminal
-term = Terminal()
+# Initialize terminal
+TERMINAL_WIDTH = 100
+TERMINAL_START_HEIGHT = 15
+COMMAND_LIST = ["exit", "close", "load"]
 
-def main():
-    print_logo()
-    row_data = []
-    while True:
-        
-        
-                    
-def interpret_command(command):
-    if command.strip() == 'exit':
-        return False  # Signal to exit the program
+
+def interpret_command(command: list) -> str:
+    """Checks if command is valid
+
+    Args:
+        command (str): command line input
+
+    Returns:
+        Str: Returns 'valid' if command is valid otherwise returns formatted invalid message
+    """
+    if command[0] in COMMAND_LIST:
+        return 'valid'
     else:
-        print(f'Running command: {command}')
-    return True
+        return f'{f'Invalid Command: {command[0]}':^{TERMINAL_WIDTH - 4}}'
+        
+
+def execute_command(command: list) -> list:
+    """Executes commands from CLI with seperate method calls
+
+    Args:
+        command (list): list of command arguments
+
+    Returns:
+        list: row_data[] from executing given ncommand
+    """
+    match command[0]:
+        case "load":
+            return load_command(command)
+        case _:
+            return f'{f'Unexpected Exception':^{TERMINAL_WIDTH - 4}}'
+            
+def load_command(command) -> list:
+    """Loads a symbol main menu for commands
+
+    Args:
+        command (_type_): _description_
+
+    Returns:
+        list: _description_
+    """
+    row_data = []
+    if (len(command) != 2):
+        return [(f'{f'Invalid Arguments -> Use load <symbol>':^{TERMINAL_WIDTH - 4}}')]
+    row_data.append(f'{f'<{command[1].upper()}>':^{TERMINAL_WIDTH - 4}}')
+    row_data.append((" " * (TERMINAL_WIDTH - 4)))
+    return row_data
                     
-def print_logo():
+def print_logo() -> None:
     print("▄▄███▄▄·██╗   ██╗ ██████╗ ██╗     \n" +
           "██╔█═══╝██║   ██║██╔═══██╗██║     \n" +
           "███████╗██║   ██║██║   ██║██║     \n" +
@@ -31,6 +69,7 @@ def print_logo():
           "███████║ ╚████╔╝ ╚██████╔╝███████╗\n" +
           "╚═▀▀▀══╝  ╚═══╝   ╚═════╝ ╚══════╝\n"
         )
+    time.sleep(0.1)  
     
 
 
@@ -69,14 +108,31 @@ def get_options_chain() -> pd.DataFrame:
     return spx.option_chain(third_friday)
 
 def window_main(row_data):
-    print("╔"+("="*35)+"╗")
+    os.system('cls' if os.name == 'nt' else 'clear')
+    print("╔"+("═"*(TERMINAL_WIDTH - 2))+"╗")
     for set in row_data:
         print("║ ", end="")
         print(set, end="")
         print(" ║")   
-    print("╚"+("="*35)+"╝")
+    print("╚"+("═"*(TERMINAL_WIDTH - 2))+"╝")
     
     
+def main() -> None:
+    # Commands
+    print_logo()
+    row_data = []
+    for i in range(0, TERMINAL_START_HEIGHT):
+        row_data.append(("*" + " "*(TERMINAL_WIDTH - 5)))
+
+    while True:
+        window_main(row_data)
+        command = input(">>> ").lower().split(" ")
+        output = interpret_command(command)
+        if(output != "valid"):
+            row_data[0] = output
+        else:
+            row_data = execute_command(command)
+
 # Run
 if __name__ == "__main__":
     try:
