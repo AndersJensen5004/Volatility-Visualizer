@@ -3,40 +3,35 @@ import pandas as pd
 import numpy as np
 import matplotlib.pyplot as plt
 import yfinance as yf
-import PySimpleGUI as sg
-from datetime import datetime, timedelta\
+from datetime import datetime, timedelta
+from blessed import Terminal
 
-
+# Initialize blessed terminal
+term = Terminal()
 
 def main():
-    test_window()
-    year = datetime.now().year
-    month = datetime.now().month
-    third_friday = third_friday_of_month(year, month)
-    print(third_friday)
-        
-    print("test")
-    
-def test_window(): 
-    layout = [
-        [sg.Text("Enter your text:")],
-        [sg.InputText()],
-        [sg.Button("Submit"), sg.Button("Exit")],
-        [sg.Text(size=(40, 1), key="-OUTPUT-")]
-    ]
-
-    window = sg.Window("Simple Text Input", layout)
-
+    print_logo()
+    row_data = []
     while True:
-        event, values = window.read()
-        if event == sg.WINDOW_CLOSED or event == "Exit":
-            break
-        if event == "Submit":
-            text = values[0]
-            window["-OUTPUT-"].update(f"You entered: {text}")
-
-    window.close()
-
+        
+        
+                    
+def interpret_command(command):
+    if command.strip() == 'exit':
+        return False  # Signal to exit the program
+    else:
+        print(f'Running command: {command}')
+    return True
+                    
+def print_logo():
+    print("▄▄███▄▄·██╗   ██╗ ██████╗ ██╗     \n" +
+          "██╔█═══╝██║   ██║██╔═══██╗██║     \n" +
+          "███████╗██║   ██║██║   ██║██║     \n" +
+          "╚══█═██║╚██╗ ██╔╝██║   ██║██║     \n" +
+          "███████║ ╚████╔╝ ╚██████╔╝███████╗\n" +
+          "╚═▀▀▀══╝  ╚═══╝   ╚═════╝ ╚══════╝\n"
+        )
+    
 
 
 def third_friday_of_month(year: int, month: int) -> datetime:
@@ -73,8 +68,18 @@ def get_options_chain() -> pd.DataFrame:
     third_friday = third_friday_of_month(year, month)
     return spx.option_chain(third_friday)
 
-
+def window_main(row_data):
+    print("╔"+("="*35)+"╗")
+    for set in row_data:
+        print("║ ", end="")
+        print(set, end="")
+        print(" ║")   
+    print("╚"+("="*35)+"╝")
+    
     
 # Run
 if __name__ == "__main__":
-    main()
+    try:
+        main()
+    except KeyboardInterrupt:
+        pass
