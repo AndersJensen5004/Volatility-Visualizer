@@ -2,18 +2,21 @@
 import pandas as pd
 import numpy as np
 import os
-import sys
 import time
 import matplotlib.pyplot as plt
 import yfinance as yf
-from datetime import datetime, timedelta
 # Class Imports
-from equity.equity import Equity
+from equity import *
+from exit.exit import Exit
 
 # Initialize terminal
 TERMINAL_WIDTH = 100
-COMMAND_LIST = ["exit", "close", "equity"]
 PAGE = "home"
+COMMAND_LIST = ["exit", "close", "equity"]
+EQUITY_COMMAND_LIST = ["exit", "des", "stat", "cn", "gp", "gip", "dvd", "ern", "fa"]
+
+#Initalize Instances
+equity_instance = Equity("")
 
 
 def interpret_command(command: list) -> str:
@@ -25,10 +28,20 @@ def interpret_command(command: list) -> str:
     Returns:
         Str: Returns 'valid' if command is valid otherwise returns formatted invalid message
     """
-    if command[0] in COMMAND_LIST:
-        return 'valid'
-    else:
-        return f'{f'Invalid Command: {command[0]}':^{TERMINAL_WIDTH - 4}}'
+    global PAGE
+    match PAGE:
+        case "home":
+            if command[0] in COMMAND_LIST:
+                return 'valid'
+            else:
+                return f'{f'Invalid Command: {command[0]}':^{TERMINAL_WIDTH - 4}}'
+        case "equity":
+            if command[0] in EQUITY_COMMAND_LIST:
+                return 'valid'
+            else:
+                return f'{f'Invalid Command: {command[0]}':^{TERMINAL_WIDTH - 4}}'
+        case _:
+            return (f'{f'Unexpected Exception interpret_command -> match PAGE':^{TERMINAL_WIDTH - 4}}')
         
 
 def execute_command(command: list) -> list:
@@ -40,30 +53,45 @@ def execute_command(command: list) -> list:
     Returns:
         list: row_data[] from executing given ncommand
     """
-    match command[0]:
+    global PAGE
+    match PAGE:
+        case "home":
+            match command[0]:
+                case "equity":
+                    PAGE = "equity"
+                    return equity_instance.equity_command(command, TERMINAL_WIDTH)
+                case "exit":
+                    return Exit.exit_command(TERMINAL_WIDTH)
+                case "close":
+                    exit()
+                case _:
+                    return (['Unexpected Exception execute_command -> match PAGE -> case "home" -> match command[0]'])
         case "equity":
-            PAGE = "equity"
-            return Equity.equity_command(command, TERMINAL_WIDTH)
-        case "exit":
-            PAGE = "home"
-            return exit_command(command)
-        case "close":
-            exit()
-        case _:
-            return (f'{f'Unexpected Exception':^{TERMINAL_WIDTH - 4}}')
+            match command[0]:
+                case "exit":
+                    PAGE = "home"
+                    return Exit.exit_command(TERMINAL_WIDTH)
+                case "des":
+                    return equity_instance.equity_command_des(TERMINAL_WIDTH)
+                case "stat":
+                    return equity_instance.equity_command_stat(TERMINAL_WIDTH)
+                case "cn":
+                    return equity_instance.equity_command_cn(TERMINAL_WIDTH)
+                case "gp":
+                    return equity_instance.equity_command_gp(TERMINAL_WIDTH)
+                case"gip":
+                    return equity_instance.equity_command_gip(TERMINAL_WIDTH)
+                case "dvd":
+                    return equity_instance.equity_command_dvd(TERMINAL_WIDTH)
+                case "ern":
+                    return equity_instance.equity_command_ern(TERMINAL_WIDTH)
+                case "fa":
+                    return equity_instance.equity_command_fa(TERMINAL_WIDTH)
+                case _:
+                    return (['Unexpected Exception execute_command -> match PAGE -> case "equity" -> match command[0]'])
                     
  
-def exit_command(command: list) -> list:
-    row_data = []
-    for i in range(0, 5):
-        row_data.append(("*" + " "*(TERMINAL_WIDTH - 6) +"*"))
-    row_data.append(("COMMANDS:" + " "*(TERMINAL_WIDTH - 14) +"*"))
-    row_data.append(("close - closes terminal" + " "*(TERMINAL_WIDTH - 28) +"*"))
-    row_data.append(("exit - return to home (this page)" + " "*(TERMINAL_WIDTH - 38) +"*"))
-    row_data.append(("equity <symbol> - loads equity" + " "*(TERMINAL_WIDTH - 35) +"*"))
-    for i in range(0, 5):
-        row_data.append(("*" + " "*(TERMINAL_WIDTH - 6) +"*"))
-    return row_data
+
                    
 def print_logo() -> None:
     print("▄▄███▄▄·██╗   ██╗ ██████╗ ██╗     \n" +
