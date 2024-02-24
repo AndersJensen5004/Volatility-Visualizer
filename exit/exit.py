@@ -10,4 +10,4 @@ class Exit:
         row_data.append(("equity <symbol> - loads equity" + " "*(TERMINAL_WIDTH - 35) +"*"))
         for i in range(0, 5):
             row_data.append(("*" + " "*(TERMINAL_WIDTH - 6) +"*"))
-        return row_data
+        return row_data 

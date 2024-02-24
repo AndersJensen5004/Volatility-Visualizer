@@ -27,11 +27,12 @@ class Equity:
                 return row_data
             else:
                 ticker = command[1]
+                self.TICKER = ticker.upper()
                 row_data = [
                     (" " * (margin)),
-                    f"LOADED <{ticker.upper()}>".center(margin),
+                    f"LOADED <{self.TICKER}>".center(margin),
                     (" " * (margin)),
-                    f"${yf.Ticker(ticker).history(period='1d').iloc[-1].Close:.4f}".center(margin),
+                    f"${yf.Ticker(self.TICKER).history(period='1d').iloc[-1].Close:.4f}".center(margin),
                     (" " * (margin)),
                     f" DES - Company description".ljust(margin),
                     f" STAT - Company statistics and info".ljust(margin),
@@ -42,7 +43,6 @@ class Equity:
                     f" ERN - Earnings information and summary".ljust(margin),
                     f" FA - Financial Statements".ljust(margin)
                 ]
-                self.Ticker = ticker
                 return row_data
         except Exception as e:
             row_data = []
@@ -52,7 +52,36 @@ class Equity:
             return row_data
     
     def equity_command_des(self, TERMINAL_WIDTH: int) -> list:
-        row_data = []
+        margin = TERMINAL_WIDTH - 4
+        info = yf.Ticker(self.TICKER).info
+        row_data = [
+                    (" " * (margin)),
+                    f"LOADED <{self.TICKER}>".center(margin),
+                    (" " * (margin)),
+                    f"{info["longName"]}".ljust(margin),
+                    f"Industry {info["industry"]}".rjust(margin),                    
+                ]
+        # Fix long summary overflow
+        long_summary = info["longBusinessSummary"]
+        while len(long_summary) > margin:
+            space_index = long_summary.rfind(" ", 0, margin)
+            if space_index == -1:
+                row_data.append(f"{long_summary[:margin]}".ljust(margin))
+                long_summary = long_summary[margin:]
+            else:
+                row_data.append(f"{long_summary[:space_index]}".ljust(margin))
+                long_summary = long_summary[space_index + 1:]
+
+        # Add last part of long_summary
+        row_data.append(f"{long_summary}".ljust(margin),)
+        row_data.append((" " * (margin)))
+        row_data.append(f"Corporate Info".ljust(margin))
+        row_data.append(f"{info["website"]}".ljust(margin))
+        row_data.append(f"{info["phone"]}".ljust(margin))
+        
+        row_data.append(f"{f"{info["country"]}, {info["state"]}, {info["city"]}, {info["address1"]}"}".ljust(margin))
+        
+        
         return row_data
     
     def equity_command_stat(self, TERMINAL_WIDTH: int) -> list:

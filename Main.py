@@ -10,7 +10,7 @@ from equity import *
 from exit.exit import Exit
 
 # Initialize terminal
-TERMINAL_WIDTH = 100
+TERMINAL_WIDTH = 150
 PAGE = "home"
 COMMAND_LIST = ["exit", "close", "equity"]
 EQUITY_COMMAND_LIST = ["exit", "des", "stat", "cn", "gp", "gip", "dvd", "ern", "fa"]
@@ -18,30 +18,13 @@ EQUITY_COMMAND_LIST = ["exit", "des", "stat", "cn", "gp", "gip", "dvd", "ern", "
 #Initalize Instances
 equity_instance = Equity("")
 
-
-def interpret_command(command: list) -> str:
-    """Checks if command is valid
-
-    Args:
-        command (str): command line input
-
-    Returns:
-        Str: Returns 'valid' if command is valid otherwise returns formatted invalid message
-    """
-    global PAGE
-    match PAGE:
-        case "home":
-            if command[0] in COMMAND_LIST:
-                return 'valid'
-            else:
-                return f'{f'Invalid Command: {command[0]}':^{TERMINAL_WIDTH - 4}}'
-        case "equity":
-            if command[0] in EQUITY_COMMAND_LIST:
-                return 'valid'
-            else:
-                return f'{f'Invalid Command: {command[0]}':^{TERMINAL_WIDTH - 4}}'
-        case _:
-            return (f'{f'Unexpected Exception interpret_command -> match PAGE':^{TERMINAL_WIDTH - 4}}')
+        
+def invalid_command(command: list, TERMINAL_WIDTH: int) -> list:
+    row_data = []
+    row_data.extend(["*" + " " * (TERMINAL_WIDTH - 6) + "*" for _ in range(5)])
+    row_data.append(f'{f'Invalid Command >>> {command[0]}':^{TERMINAL_WIDTH - 4}}')
+    row_data.extend(["*" + " " * (TERMINAL_WIDTH - 6) + "*" for _ in range(5)])
+    return row_data
         
 
 def execute_command(command: list) -> list:
@@ -53,43 +36,36 @@ def execute_command(command: list) -> list:
     Returns:
         list: row_data[] from executing given ncommand
     """
+    
     global PAGE
-    match PAGE:
-        case "home":
-            match command[0]:
-                case "equity":
-                    PAGE = "equity"
-                    return equity_instance.equity_command(command, TERMINAL_WIDTH)
-                case "exit":
-                    return Exit.exit_command(TERMINAL_WIDTH)
-                case "close":
-                    exit()
-                case _:
-                    return (['Unexpected Exception execute_command -> match PAGE -> case "home" -> match command[0]'])
-        case "equity":
-            match command[0]:
-                case "exit":
-                    PAGE = "home"
-                    return Exit.exit_command(TERMINAL_WIDTH)
-                case "des":
-                    return equity_instance.equity_command_des(TERMINAL_WIDTH)
-                case "stat":
-                    return equity_instance.equity_command_stat(TERMINAL_WIDTH)
-                case "cn":
-                    return equity_instance.equity_command_cn(TERMINAL_WIDTH)
-                case "gp":
-                    return equity_instance.equity_command_gp(TERMINAL_WIDTH)
-                case"gip":
-                    return equity_instance.equity_command_gip(TERMINAL_WIDTH)
-                case "dvd":
-                    return equity_instance.equity_command_dvd(TERMINAL_WIDTH)
-                case "ern":
-                    return equity_instance.equity_command_ern(TERMINAL_WIDTH)
-                case "fa":
-                    return equity_instance.equity_command_fa(TERMINAL_WIDTH)
-                case _:
-                    return (['Unexpected Exception execute_command -> match PAGE -> case "equity" -> match command[0]'])
-                    
+    command_mappings = {
+        "home": {
+            "equity": lambda: ("equity", equity_instance.equity_command(command, TERMINAL_WIDTH)),
+            "exit": lambda: ("home", Exit.exit_command(TERMINAL_WIDTH)),
+            "close": lambda: ("exit", exit()),
+            "_default": lambda: ("home", invalid_command(command, TERMINAL_WIDTH)),
+        },
+        "equity": {
+            "exit": lambda: ("home", Exit.exit_command(TERMINAL_WIDTH)),
+            "equity": lambda: ("equity", equity_instance.equity_command(command, TERMINAL_WIDTH)),
+            "des": lambda: ("equity", equity_instance.equity_command_des(TERMINAL_WIDTH)),
+            "stat": lambda: ("equity", equity_instance.equity_command_stat(TERMINAL_WIDTH)),
+            "cn": lambda: ("equity", equity_instance.equity_command_cn(TERMINAL_WIDTH)),
+            "gp": lambda: ("equity", equity_instance.equity_command_gp(TERMINAL_WIDTH)),
+            "gip": lambda: ("equity", equity_instance.equity_command_gip(TERMINAL_WIDTH)),
+            "dvd": lambda: ("equity", equity_instance.equity_command_dvd(TERMINAL_WIDTH)),
+            "ern": lambda: ("equity", equity_instance.equity_command_ern(TERMINAL_WIDTH)),
+            "fa": lambda: ("equity", equity_instance.equity_command_fa(TERMINAL_WIDTH)),
+            "_default": lambda: ("equity", invalid_command(command, TERMINAL_WIDTH)),
+        }
+    }
+
+    current_page_commands = command_mappings.get(PAGE, command_mappings["home"]) #home is default page
+    command_function = current_page_commands.get(command[0], current_page_commands["_default"])
+
+    # Execute
+    PAGE, row_data = command_function()
+    return row_data
  
 
                    
@@ -129,12 +105,8 @@ def main() -> None:
     while True:
         window_main(row_data)
         command = input(">>> ").lower().split(" ")
-        output = interpret_command(command)
-        if(output != "valid"):
-            row_data[0] = output
-        else:
-            row_data = execute_command(command)
-
+        row_data = execute_command(command)
+        
 # Run
 if __name__ == "__main__":
     try:
