@@ -5,15 +5,14 @@ import os
 import time
 import matplotlib.pyplot as plt
 import yfinance as yf
+from colorama import Fore, Back, Style
 # Class Imports
 from equity import *
 from exit.exit import Exit
 
 # Initialize terminal
 TERMINAL_WIDTH = 150
-PAGE = "home"
-COMMAND_LIST = ["exit", "close", "equity"]
-EQUITY_COMMAND_LIST = ["exit", "des", "stat", "cn", "gp", "gip", "dvd", "ern", "fa"]
+PAGE = "home" # useless
 
 #Initalize Instances
 equity_instance = Equity("")
@@ -77,6 +76,7 @@ def print_logo() -> None:
           "███████║ ╚████╔╝ ╚██████╔╝███████╗\n" +
           "╚═▀▀▀══╝  ╚═══╝   ╚═════╝ ╚══════╝\n"
         )
+    print(Style.RESET_ALL)
     time.sleep(0.1)  
 
 def window_main(row_data):

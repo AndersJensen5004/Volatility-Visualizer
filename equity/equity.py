@@ -1,5 +1,5 @@
 import yfinance as yf
-
+from colorama import Fore, Back, Style
 
 class Equity:
     
@@ -18,6 +18,8 @@ class Equity:
         """
         
         margin = TERMINAL_WIDTH - 4
+        color = 8
+        reset = 7
         try:
             if (len(command) != 2):
                 row_data = []
@@ -53,12 +55,14 @@ class Equity:
     
     def equity_command_des(self, TERMINAL_WIDTH: int) -> list:
         margin = TERMINAL_WIDTH - 4
+        color = 5
+        reset = 4
         info = yf.Ticker(self.TICKER).info
         row_data = [
                     (" " * (margin)),
                     f"LOADED <{self.TICKER}>".center(margin),
                     (" " * (margin)),
-                    f"{info["longName"]}".ljust(margin),
+                    f"{Fore.CYAN}{info["longName"]}{Style.RESET_ALL}".ljust(margin + color + reset),
                     f"Industry {info["industry"]}".rjust(margin),                    
                 ]
         # Fix long summary overflow
