@@ -1,18 +1,17 @@
 # Imports
-import pandas as pd
-import numpy as np
 import os
 import time
 import matplotlib.pyplot as plt
 import yfinance as yf
-from colorama import Fore, Back, Style
+import curses
+from curses import *
 # Class Imports
 from equity import *
 from exit.exit import Exit
 
 # Initialize terminal
 TERMINAL_WIDTH = 150
-PAGE = "home" # useless
+PAGE = "home" # remove shit global variables
 
 #Initalize Instances
 equity_instance = Equity("")
@@ -89,27 +88,54 @@ def window_main(row_data):
     print("╚"+("═"*(TERMINAL_WIDTH - 2))+"╝")
     
     
-def main() -> None:
-    # Commands
-    print_logo()
-    row_data = []
-    for i in range(0, 5):
-        row_data.append(("*" + " "*(TERMINAL_WIDTH - 6) +"*"))
-    row_data.append(("COMMANDS:" + " "*(TERMINAL_WIDTH - 14) +"*"))
-    row_data.append(("close - closes terminal" + " "*(TERMINAL_WIDTH - 28) +"*"))
-    row_data.append(("exit - return to home (this page)" + " "*(TERMINAL_WIDTH - 38) +"*"))
-    row_data.append(("equity <symbol> - loads equity" + " "*(TERMINAL_WIDTH - 35) +"*"))
-    for i in range(0, 5):
-        row_data.append(("*" + " "*(TERMINAL_WIDTH - 6) +"*"))
+def main(stdscr):
+   ## Commands
+   #print_logo()
+   #row_data = []
+   #for i in range(0, 5):
+   #    row_data.append(("*" + " "*(TERMINAL_WIDTH - 6) +"*"))
+   #row_data.append(("COMMANDS:" + " "*(TERMINAL_WIDTH - 14) +"*"))
+   #row_data.append(("close - closes terminal" + " "*(TERMINAL_WIDTH - 28) +"*"))
+   #row_data.append(("exit - return to home (this page)" + " "*(TERMINAL_WIDTH - 38) +"*"))
+   #row_data.append(("equity <symbol> - loads equity" + " "*(TERMINAL_WIDTH - 35) +"*"))
+   #for i in range(0, 5):
+   #    row_data.append(("*" + " "*(TERMINAL_WIDTH - 6) +"*"))
 
+   #while True:
+   #    window_main(row_data)
+   #    command = input(">>> ").lower().split(" ")
+   #    row_data = execute_command(command)
+    # Initialize curses
+    # Initialize curses
+    curses.curs_set(0)  # Hide the cursor
+
+    # Get the size of the terminal window
+    height, width = stdscr.getmaxyx()
+
+    # Create a textbox at the top for user input
+    input_box = curses.newwin(3, width, 0, 0)
+    input_box.addstr(1, 1, ">>> ")
+    input_box.refresh()
+
+    # Main loop
     while True:
-        window_main(row_data)
-        command = input(">>> ").lower().split(" ")
-        row_data = execute_command(command)
+        # Get user input
+        user_input = input_box.getstr(1, 5, width - 5).decode("utf-8")
+
+        # Handle user input (process command)
+        # For now, we just print the input
+        stdscr.addstr(5, 0, f"Command: {user_input}")
+        stdscr.refresh()
+
+        # Clear input box
+        input_box.clear()
+        input_box.addstr(1, 1, ">>> ")
+        input_box.refresh()
         
 # Run
 if __name__ == "__main__":
-    try:
-        main()
-    except KeyboardInterrupt:
-        pass
+    #try:
+    curses.wrapper(main)
+   
+    #except KeyboardInterrupt:
+    #    pass
