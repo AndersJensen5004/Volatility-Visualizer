@@ -1,11 +1,11 @@
 import yfinance as yf
-from colorama import Fore, Back, Style
+
 
 class Equity:
-    
+
     def __init__(self, ticker):
         self.TICKER = ticker
-        
+
     def equity_command(self, command: list, TERMINAL_WIDTH: int) -> list:
         """Loads a symbol main menu for commands
 
@@ -16,7 +16,7 @@ class Equity:
         Returns:
             list: row_data of command list for equity
         """
-        
+
         margin = TERMINAL_WIDTH - 4
         color = 8
         reset = 7
@@ -48,23 +48,21 @@ class Equity:
                 return row_data
         except Exception as e:
             row_data = []
-            row_data.append(f'{f'<{type(e).__name__}> Exception':^{margin}}')
-            row_data.append(f'{f'<{command[1].upper()}> is not a valid symbol.':^{margin}}')
+            row_data.append(f'{f"<{type(e).__name__}> Exception" :^{margin}}')
+            row_data.append(f'{f"<{command[1].upper()}> is not a valid symbol." :^{margin}}')
             row_data.append((" " * (margin)))
             return row_data
-    
+
     def equity_command_des(self, TERMINAL_WIDTH: int) -> list:
         margin = TERMINAL_WIDTH - 4
-        color = 5
-        reset = 4
         info = yf.Ticker(self.TICKER).info
         row_data = [
-                    (" " * (margin)),
-                    f"LOADED <{self.TICKER}>".center(margin),
-                    (" " * (margin)),
-                    f"{Fore.CYAN}{info["longName"]}{Style.RESET_ALL}".ljust(margin + color + reset),
-                    f"Industry {info["industry"]}".rjust(margin),                    
-                ]
+            (" " * (margin)),
+            f"LOADED <{self.TICKER}>".center(margin),
+            (" " * (margin)),
+            f"{info['longName']}".ljust(margin),
+            f"Industry {info['industry']}".rjust(margin),
+        ]
         # Fix long summary overflow
         long_summary = info["longBusinessSummary"]
         while len(long_summary) > margin:
@@ -77,41 +75,40 @@ class Equity:
                 long_summary = long_summary[space_index + 1:]
 
         # Add last part of long_summary
-        row_data.append(f"{long_summary}".ljust(margin),)
+        row_data.append(f"{long_summary}".ljust(margin), )
         row_data.append((" " * (margin)))
         row_data.append(f"Corporate Info".ljust(margin))
-        row_data.append(f"{info["website"]}".ljust(margin))
-        row_data.append(f"{info["phone"]}".ljust(margin))
-        
-        row_data.append(f"{f"{info["country"]}, {info["state"]}, {info["city"]}, {info["address1"]}"}".ljust(margin))
-        
-        
+        row_data.append(f"{info['website']}".ljust(margin))
+        row_data.append(f"{info['phone']}".ljust(margin))
+
+        # row_data.append(f"{f'{info["country"]}, {info["state"]}, {info["city"]}, {info["address1"]}'}".ljust(margin))
+
         return row_data
-    
+
     def equity_command_stat(self, TERMINAL_WIDTH: int) -> list:
         row_data = []
         return row_data
-    
+
     def equity_command_cn(self, TERMINAL_WIDTH: int) -> list:
         row_data = []
         return row_data
-    
+
     def equity_command_gp(self, TERMINAL_WIDTH: int) -> list:
         row_data = []
         return row_data
-    
+
     def equity_command_gip(self, TERMINAL_WIDTH: int) -> list:
         row_data = []
         return row_data
-    
+
     def equity_command_dvd(self, TERMINAL_WIDTH: int) -> list:
         row_data = []
         return row_data
-    
+
     def equity_command_ern(self, TERMINAL_WIDTH: int) -> list:
         row_data = []
         return row_data
-    
+
     def equity_command_fa(self, TERMINAL_WIDTH: int) -> list:
         row_data = []
         return row_data

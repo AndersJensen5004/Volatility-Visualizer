@@ -11,10 +11,10 @@ import curses
 
 def draw_border(window):
     window.erase()
-    window.border('|', '|', '-', '-', '+', '+', '+', '+')
+    window.border('|', 180, '-', '-', '+', '+', '+', '+')
 
     height, width = window.getmaxyx()
-    title = "Test Application"
+    title = "Test Application123123"
     window.addstr(0, max(1, width // 2 - len(title) // 2), title)
     window.refresh()  # Refresh the window to show the border
 
@@ -36,5 +36,5 @@ def main(stdscr):
 
 
 if __name__ == "__main__":
-    print("POOP1")
+    print(ord("║"), ord("║"), ord("═"), ord("═"), ord("╔"), ord("╗"), ord("╚"), ord("╝"))
     curses.wrapper(main)
