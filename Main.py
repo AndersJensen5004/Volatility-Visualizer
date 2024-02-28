@@ -11,26 +11,32 @@ from exit.exit import Exit
 TERMINAL_WIDTH = 150
 PAGE = "home"  # remove shit global variables
 
-# Initalize Instances
+# Initialize Instances
 equity_instance = Equity("")
 
 
-def invalid_command(command: list, TERMINAL_WIDTH: int) -> list:
-    row_data = []
-    row_data.extend(["*" + " " * (TERMINAL_WIDTH - 6) + "*" for _ in range(5)])
-    row_data.append(f'{f"Invalid Command >>> {command[0]}" :^{TERMINAL_WIDTH - 4}}')
-    row_data.extend(["*" + " " * (TERMINAL_WIDTH - 6) + "*" for _ in range(5)])
-    return row_data
+def invalid_command(w, command: list) -> None:
+    """
+    Prints out invalid command in terminal
 
+    Args:
+        w: curses window
+        command (list): list of command arguments
+
+    Returns: Nothing
+
+    """
+    w.refresh()
+    w.addstr(1, 3, f"Invalid Command >>> {command[0]}")
 
 def execute_command(command: list) -> list:
-    """Executes commands from CLI with seperate method calls
+    """Executes commands from CLI with separate method calls
 
     Args:
         command (list): list of command arguments
 
     Returns:
-        list: row_data[] from executing given ncommand
+        list: row_data[] from executing given command
     """
 
     global PAGE
@@ -64,17 +70,6 @@ def execute_command(command: list) -> list:
     return row_data
 
 
-def print_logo() -> None:
-    print("▄▄███▄▄·██╗   ██╗ ██████╗ ██╗     \n" +
-          "██╔█═══╝██║   ██║██╔═══██╗██║     \n" +
-          "███████╗██║   ██║██║   ██║██║     \n" +
-          "╚══█═██║╚██╗ ██╔╝██║   ██║██║     \n" +
-          "███████║ ╚████╔╝ ╚██████╔╝███████╗\n" +
-          "╚═▀▀▀══╝  ╚═══╝   ╚═════╝ ╚══════╝\n"
-          )
-    time.sleep(0.1)
-
-
 def window_main(row_data):
     os.system('cls' if os.name == 'nt' else 'clear')
     print("╔" + ("═" * (TERMINAL_WIDTH - 2)) + "╗")
@@ -85,7 +80,7 @@ def window_main(row_data):
     print("╚" + ("═" * (TERMINAL_WIDTH - 2)) + "╝")
 
 
-def command_line(w):
+def command_line(w, w_width: int) -> list:
     # Start colors in curses
     curses.start_color()
     curses.init_pair(1, curses.COLOR_CYAN, curses.COLOR_BLACK)
@@ -102,6 +97,7 @@ def command_line(w):
     cursor_y = 1
 
     # Print a prompt
+    w.refresh()
     w.addstr(1, 1, ">>> ", curses.color_pair(1))  # Adjust position
     w.refresh()
 
@@ -120,49 +116,43 @@ def command_line(w):
                 w.refresh()
                 w.move(cursor_y, cursor_x + 1)
         elif 32 <= key <= 126:  # Printable characters
-            command_list.append(chr(key))
-            w.addstr(cursor_y, cursor_x + 1, chr(key), curses.color_pair(2))
-            cursor_x += 1
-            w.refresh()
-            w.move(cursor_y, cursor_x + 1)
-    # Join command
-    return ''.join(command_list)
+            if len(command_list) < (w_width - 8):  # Not allowing user to overflow window
+                command_list.append(chr(key))
+                w.addstr(cursor_y, cursor_x + 1, chr(key), curses.color_pair(2))
+                cursor_x += 1
+                w.refresh()
+                w.move(cursor_y, cursor_x + 1)
+
+    # join commands and split them into a list of lowercase arguments
+    commands = (''.join(command_list)).lower().split(' ')
+    command_list = []
+    for c in commands:
+        if c != '':
+            command_list.append(c)
+    return command_list
 
 
 def main():
-    ## Commands
-    # print_logo()
-    # row_data = []
-    # for i in range(0, 5):
-    #    row_data.append(("*" + " "*(TERMINAL_WIDTH - 6) +"*"))
-    # row_data.append(("COMMANDS:" + " "*(TERMINAL_WIDTH - 14) +"*"))
-    # row_data.append(("close - closes terminal" + " "*(TERMINAL_WIDTH - 28) +"*"))
-    # row_data.append(("exit - return to home (this page)" + " "*(TERMINAL_WIDTH - 38) +"*"))
-    # row_data.append(("equity <symbol> - loads equity" + " "*(TERMINAL_WIDTH - 35) +"*"))
-    # for i in range(0, 5):
-    #    row_data.append(("*" + " "*(TERMINAL_WIDTH - 6) +"*"))
-
-    # while True:
-    #    window_main(row_data)
-    #    command = input(">>> ").lower().split(" ")
-    #    row_data = execute_command(command)
-    # Setup curses
     stdscr = curses.initscr()
     curses.cbreak()
     stdscr.keypad(True)
 
     # Define window size and position
-    height, width = stdscr.getmaxyx()
-    window_height = height  # Adjust for window border
-    window_width = width  # Adjust for window border
+    window_height, window_width = stdscr.getmaxyx()
 
     # Create window with border
-    window = curses.newwin(window_height, window_width, 0, 0)
-    window.border(9553, 9553, 9552, 9552, 9556, 9559, 9562, 9565)
-    window.refresh()
+    main_window = curses.newwin(window_height, window_width, 0, 0)
+    main_window.border(9553, 9553, 9552, 9552, 9556, 9559, 9562, 9565)
+    main_window.refresh()
 
     # Get user input
-    command = command_line(window)
+    while True:
+        user_command = command_line(main_window, window_width)
+        execute_command(user_command)
+        main_window.refresh()
+
+        # Restore terminal settings
+        print(user_command)
 
     # Restore terminal settings
     curses.echo()
@@ -171,13 +161,11 @@ def main():
     curses.endwin()
 
     # Return the command entered by the user
-    return command
 
 
 # Run
 if __name__ == "__main__":
-    command = main()
-    print("Command entered:", command)
+    main()
 
     # except KeyboardInterrupt:
     #    pass
