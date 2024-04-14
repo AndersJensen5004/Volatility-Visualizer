@@ -1,4 +1,17 @@
+import curses
 import yfinance as yf
+
+equity_commands = [
+    " LOAD - Loads equity",
+    " DES - Company description",
+    " STAT - Company statistics and info",
+    " CN - Company news",
+    " GP - Historical price chart",
+    " GIP - Intraday price chart",
+    " DVD - Dividend information",
+    " ERN - Earnings information and summary",
+    " FA - Financial Statements"
+]
 
 
 class Equity:
@@ -6,109 +19,129 @@ class Equity:
     def __init__(self, ticker):
         self.TICKER = ticker
 
-    def equity_command(self, command: list, TERMINAL_WIDTH: int) -> list:
+    def execute_command(self, p, command: list) -> None:
+        command_mappings = {
+            "load": lambda: (self.equity_command_load(p, command)),
+            "des": lambda: (self.equity_command_des(p, command)),
+            "stat": lambda: (self.equity_command_stat(p, command)),
+            "cn": lambda: (self.equity_command_cn(p, command)),
+            "gp": lambda: (self.equity_command_gp(p, command)),
+            "gip": lambda: (self.equity_command_gip(p, command)),
+            "dvd": lambda: (self.equity_command_dvd(p, command)),
+            "ern": lambda: (self.equity_command_ern(p, command)),
+            "fa": lambda: (self.equity_command_fa(p, command)),
+            "_default": lambda: (self.equity_invalid_command(p, command)),
+        }
+        # Second Argument
+        try:
+            command_function = command_mappings.get(command[1], command_mappings["_default"])
+        except IndexError:
+            if self.TICKER is None:
+                command_function = command_mappings["_default"]
+            else:
+                command_function = lambda: (self.equity_command_load(p, ["equity", "load", self.TICKER]))
+        # Execute
+        command_function()
+
+    @staticmethod
+    def equity_invalid_command(p, command: list) -> None:
+
+        curses.init_pair(4, curses.COLOR_RED, curses.COLOR_BLACK)
+        curses.init_pair(3, curses.COLOR_GREEN, curses.COLOR_BLACK)
+        curses.init_pair(10, curses.COLOR_WHITE, curses.COLOR_BLACK)
+
+        arguments = ' '.join(f'<{arg}>' for arg in command)
+        invalid_usage = f"Invalid Command Usage >>> {arguments}"
+        invalid_y, invalid_x = p.getmaxyx()
+        # **CHANGED invalid_y TO 9 TESTING PAD**
+        invalid_y = 9
+        # Center horizontally, ensuring invalid_x is non-negative
+        invalid_x = max((invalid_x - len(invalid_usage)) // 2, 0)
+        p.addstr(invalid_y // 3, invalid_x, invalid_usage, curses.color_pair(4))
+
+        correct_usage = [
+            "Use <equity> <load> <TICKER>",
+            "OR <equity> <load> <TICKER> <menu>",
+            "OR <equity> <menu>"
+        ]
+        correct_y = (invalid_y // 3) + 2  # Place correct usage below invalid usage
+        correct_x = (invalid_x + 4)  # Indent correct usage slightly
+        for usage in correct_usage:
+            p.addstr(correct_y, correct_x, usage, curses.color_pair(3))
+            correct_y += 1
+
+        description_y = correct_y + 2  # Place descriptions below correct usage
+        description_x = 1  # Left-align descriptions
+        for c in equity_commands:
+            p.addstr(description_y, description_x, c, curses.color_pair(10))
+            description_y += 1
+
+    def equity_command_load(self, p, command: list) -> None:
         """Loads a symbol main menu for commands
 
         Args:
+            p (curses pad): curses pad
             command (list): list of command arguments
-            TERMINAL_WIDTH (int): width of terminal window
 
-        Returns:
-            list: row_data of command list for equity
         """
 
-        margin = TERMINAL_WIDTH - 4
-        color = 8
-        reset = 7
+        curses.init_pair(10, curses.COLOR_WHITE, curses.COLOR_BLACK)
+        curses.init_pair(6, curses.COLOR_MAGENTA, curses.COLOR_BLACK)
+
         try:
-            if (len(command) != 2):
-                row_data = []
-                row_data.extend(["*" + " " * (TERMINAL_WIDTH - 6) + "*" for _ in range(5)])
-                row_data.append(f"{'Invalid Arguments -> Use equity <symbol>':^{margin}}")
-                row_data.extend(["*" + " " * (TERMINAL_WIDTH - 6) + "*" for _ in range(5)])
-                return row_data
-            else:
-                ticker = command[1]
-                self.TICKER = ticker.upper()
-                row_data = [
-                    (" " * (margin)),
-                    f"LOADED <{self.TICKER}>".center(margin),
-                    (" " * (margin)),
-                    f"${yf.Ticker(self.TICKER).history(period='1d').iloc[-1].Close:.4f}".center(margin),
-                    (" " * (margin)),
-                    f" DES - Company description".ljust(margin),
-                    f" STAT - Company statistics and info".ljust(margin),
-                    f" CN - Company news".ljust(margin),
-                    f" GP - Historical price chart".ljust(margin),
-                    f" GIP - Intraday price chart".ljust(margin),
-                    f" DVD - Dividend information".ljust(margin),
-                    f" ERN - Earnings information and summary".ljust(margin),
-                    f" FA - Financial Statements".ljust(margin)
-                ]
-                return row_data
-        except Exception as e:
-            row_data = []
-            row_data.append(f'{f"<{type(e).__name__}> Exception" :^{margin}}')
-            row_data.append(f'{f"<{command[1].upper()}> is not a valid symbol." :^{margin}}')
-            row_data.append((" " * (margin)))
-            return row_data
+            ticker = command[2]
+        except IndexError:
+            self.equity_invalid_command(p, command)
+            return
 
-    def equity_command_des(self, TERMINAL_WIDTH: int) -> list:
-        margin = TERMINAL_WIDTH - 4
-        info = yf.Ticker(self.TICKER).info
-        row_data = [
-            (" " * (margin)),
-            f"LOADED <{self.TICKER}>".center(margin),
-            (" " * (margin)),
-            f"{info['longName']}".ljust(margin),
-            f"Industry {info['industry']}".rjust(margin),
+        self.TICKER = ticker.upper()
+        price = yf.Ticker(self.TICKER).history(period='1d').iloc[-1].Close
+        if price > 1:
+            price_string = f"${price:.2f}"
+        else:
+            price_string = f"${price:.4f}"
+
+        data = [
+            f"LOADED <{self.TICKER}>",
+            price_string,
         ]
-        # Fix long summary overflow
-        long_summary = info["longBusinessSummary"]
-        while len(long_summary) > margin:
-            space_index = long_summary.rfind(" ", 0, margin)
-            if space_index == -1:
-                row_data.append(f"{long_summary[:margin]}".ljust(margin))
-                long_summary = long_summary[margin:]
-            else:
-                row_data.append(f"{long_summary[:space_index]}".ljust(margin))
-                long_summary = long_summary[space_index + 1:]
 
-        # Add last part of long_summary
-        row_data.append(f"{long_summary}".ljust(margin), )
-        row_data.append((" " * (margin)))
-        row_data.append(f"Corporate Info".ljust(margin))
-        row_data.append(f"{info['website']}".ljust(margin))
-        row_data.append(f"{info['phone']}".ljust(margin))
+        # Print data centered and in orange
+        data_y, data_x = p.getmaxyx()
+        data_x = (data_x - max(len(line) for line in data)) // 2  # Center horizontally
+        center_y = data_y // 6
+        for line in data:
+            p.addstr(center_y, data_x, line, curses.color_pair(6))
+            center_y += 1
 
-        # row_data.append(f"{f'{info["country"]}, {info["state"]}, {info["city"]}, {info["address1"]}'}".ljust(margin))
+        # Print descriptions in white
+        description_y = center_y + 2  # Place descriptions below data
+        description_x = 1  # Left-align descriptions
+        for c in equity_commands:
+            p.addstr(description_y, description_x, c, curses.color_pair(10))
+            description_y += 1
 
-        return row_data
+    def equity_command_des(self, p, command: list) -> None:
+        info = yf.Ticker(self.TICKER).info
+        pass
 
-    def equity_command_stat(self, TERMINAL_WIDTH: int) -> list:
-        row_data = []
-        return row_data
+    def equity_command_stat(self, p, command: list) -> None:
+        pass
 
-    def equity_command_cn(self, TERMINAL_WIDTH: int) -> list:
-        row_data = []
-        return row_data
+    def equity_command_cn(self, p, command: list) -> None:
+        pass
 
-    def equity_command_gp(self, TERMINAL_WIDTH: int) -> list:
-        row_data = []
-        return row_data
+    def equity_command_gp(self, p, command: list) -> None:
+        pass
 
-    def equity_command_gip(self, TERMINAL_WIDTH: int) -> list:
-        row_data = []
-        return row_data
+    def equity_command_gip(self, p, command: list) -> None:
+        pass
 
-    def equity_command_dvd(self, TERMINAL_WIDTH: int) -> list:
-        row_data = []
-        return row_data
+    def equity_command_dvd(self, p, command: list) -> None:
+        pass
 
-    def equity_command_ern(self, TERMINAL_WIDTH: int) -> list:
-        row_data = []
-        return row_data
+    def equity_command_ern(self, p, command: list) -> None:
+        pass
 
-    def equity_command_fa(self, TERMINAL_WIDTH: int) -> list:
-        row_data = []
-        return row_data
+    def equity_command_fa(self, p, command: list) -> None:
+        pass

@@ -1,136 +1,196 @@
-#TEST COMMITt
 # Imports
 import os
 import time
 import curses
+import threading
 from curses import *
 # Class Imports
 from equity import *
 from exit.exit import Exit
 
-# Initialize terminal
-TERMINAL_WIDTH = 150
-PAGE = "home"  # remove shit global variables
 
 # Initialize Instances
-equity_instance = Equity("")
+equity_instance = Equity(None)
+
+PAD_Y: int = 0
 
 
-def invalid_command(w, command: list) -> None:
+def invalid_command(p, command: list) -> None:
     """
     Prints out invalid command in terminal
 
     Args:
-        w: curses window
+        p: curses pad
         command (list): list of command arguments
 
     Returns: Nothing
 
     """
-    w.refresh()
-    w.addstr(1, 3, f"Invalid Command >>> {command[0]}")
+    curses.init_pair(4, curses.COLOR_RED, curses.COLOR_BLACK)
+    pad_height, pad_width = p.getmaxyx()
+    message = f"Invalid Command >>> {command[0]}"
+    message_length = len(message)
 
-def execute_command(command: list) -> list:
+    start_y = (pad_height - 6) // 2  # 6 offset y
+    start_x = max((pad_width - message_length) // 2, 2)
+
+    p.addstr(start_y, start_x, message, curses.color_pair(4))
+
+
+def execute_command(p, command: list) -> None:
     """Executes commands from CLI with separate method calls
 
     Args:
+        p: curses pad
         command (list): list of command arguments
 
-    Returns:
-        list: row_data[] from executing given command
     """
 
-    global PAGE
     command_mappings = {
-        "home": {
-            "equity": lambda: ("equity", equity_instance.equity_command(command, TERMINAL_WIDTH)),
-            "exit": lambda: ("home", Exit.exit_command(TERMINAL_WIDTH)),
-            "close": lambda: ("exit", exit()),
-            "_default": lambda: ("home", invalid_command(command, TERMINAL_WIDTH)),
-        },
-        "equity": {
-            "exit": lambda: ("home", Exit.exit_command(TERMINAL_WIDTH)),
-            "equity": lambda: ("equity", equity_instance.equity_command(command, TERMINAL_WIDTH)),
-            "des": lambda: ("equity", equity_instance.equity_command_des(TERMINAL_WIDTH)),
-            "stat": lambda: ("equity", equity_instance.equity_command_stat(TERMINAL_WIDTH)),
-            "cn": lambda: ("equity", equity_instance.equity_command_cn(TERMINAL_WIDTH)),
-            "gp": lambda: ("equity", equity_instance.equity_command_gp(TERMINAL_WIDTH)),
-            "gip": lambda: ("equity", equity_instance.equity_command_gip(TERMINAL_WIDTH)),
-            "dvd": lambda: ("equity", equity_instance.equity_command_dvd(TERMINAL_WIDTH)),
-            "ern": lambda: ("equity", equity_instance.equity_command_ern(TERMINAL_WIDTH)),
-            "fa": lambda: ("equity", equity_instance.equity_command_fa(TERMINAL_WIDTH)),
-            "_default": lambda: ("equity", invalid_command(command, TERMINAL_WIDTH)),
-        }
+        "equity": lambda: (equity_instance.execute_command(p, command)),
+        "close": lambda: (exit()),
+        "_default": lambda: (invalid_command(p, command)),
     }
 
-    current_page_commands = command_mappings.get(PAGE, command_mappings["home"])  # home is default page
-    command_function = current_page_commands.get(command[0], current_page_commands["_default"])
+    command_function = command_mappings.get(command[0], command_mappings["_default"])
 
     # Execute
-    PAGE, row_data = command_function()
-    return row_data
+    command_function()
 
 
-def window_main(row_data):
-    os.system('cls' if os.name == 'nt' else 'clear')
-    print("╔" + ("═" * (TERMINAL_WIDTH - 2)) + "╗")
-    for set in row_data:
-        print("║ ", end="")
-        print(set, end="")
-        print(" ║")
-    print("╚" + ("═" * (TERMINAL_WIDTH - 2)) + "╝")
+def draw_main(w) -> None:
+    w.border(9553, 9553, 9552, 9552, 9556, 9559, 9562, 9565)
+    w.refresh()
 
 
-def command_line(w, w_width: int) -> list:
-    # Start colors in curses
-    curses.start_color()
-    curses.init_pair(1, curses.COLOR_CYAN, curses.COLOR_BLACK)
-    curses.init_pair(2, curses.COLOR_WHITE, curses.COLOR_BLACK)
+def command_line(w, p, window_height: int, window_width: int) -> list:
+    global PAD_Y
 
     # Don't echo user's keystrokes
     curses.noecho()
+
+    height, width = w.getmaxyx()
+    pad_pos_y, pad_pos_x = 3, 1  # Position to display pad in main window
+
     # Enable keypad mode for special keys
     w.keypad(True)
 
+    curses.start_color()
+    curses.init_pair(1, curses.COLOR_CYAN, curses.COLOR_BLACK)
+
+    w.addstr(0, 0, ">>> ", curses.color_pair(1))  # CLI
+
     # Initialize the command string
     command_list = []
-    cursor_x = 4  # Adjust cursor position
+    cursor_x = 3  # Adjust cursor position
     cursor_y = 1
-
-    # Print a prompt
-    w.refresh()
-    w.addstr(1, 1, ">>> ", curses.color_pair(1))  # Adjust position
-    w.refresh()
+    cursor_y_offset = -1
 
     while True:
         # Get user input
-        key = w.getch()
+        key = w.get_wch()
+        try:
+            key_value = ord(key)
+        except TypeError:
+            key_value = -1
         # Handling special keys
-        if key == curses.KEY_ENTER or key in [10, 13]:
+        if key == curses.KEY_ENTER or key_value in [10, 13]:
             break
-        # IN WINDOWS11 IT'S 8 I DON'T KNOW WHAT THE OTHER NUMBERS ARE
-        elif key == curses.KEY_BACKSPACE or key == 127 or key == 22 or key == 8:
+
+        # IN WINDOWS IT'S 8 I DON'T KNOW WHAT THE OTHER NUMBERS ARE
+        elif key == curses.KEY_BACKSPACE or key_value == 127 or key_value == 22 or key_value == 8:
             if len(command_list) > 0:  # Adjust position
                 command_list.pop()
                 cursor_x -= 1
-                w.addstr(cursor_y, cursor_x + 1, " ")  # Clear character
+                w.addch(cursor_y + cursor_y_offset, cursor_x + 1, " ")  # Clear character
                 w.refresh()
-                w.move(cursor_y, cursor_x + 1)
-        elif 32 <= key <= 126:  # Printable characters
-            if len(command_list) < (w_width - 8):  # Not allowing user to overflow window
-                command_list.append(chr(key))
-                w.addstr(cursor_y, cursor_x + 1, chr(key), curses.color_pair(2))
+                w.move(cursor_y + cursor_y_offset, cursor_x + 1)
+
+        elif 32 <= key_value <= 126:  # Printable characters
+            if len(command_list) < (width - 6):  # Not allowing user to overflow window
+                command_list.append(chr(key_value))
+                w.addch(cursor_y + cursor_y_offset, cursor_x + 1, chr(key_value))
                 cursor_x += 1
                 w.refresh()
-                w.move(cursor_y, cursor_x + 1)
+                w.move(cursor_y + cursor_y_offset, cursor_x + 1)
+
+        elif key == curses.KEY_DOWN:
+            print(PAD_Y)
+            PAD_Y += 1
+            print(PAD_Y)
+            p.refresh(PAD_Y, 0, pad_pos_y, pad_pos_x, pad_pos_y + window_height - 5, pad_pos_x + window_width - 2)
+
+        elif key == curses.KEY_UP:
+            PAD_Y -= 1
+            p.refresh(PAD_Y, 0, pad_pos_y, pad_pos_x, pad_pos_y + window_height - 5, pad_pos_x + window_width - 2)
+
+        elif key == curses.KEY_MOUSE:
+            _, x, y, _, bstate = curses.getmouse()
+            if bstate & curses.BUTTON1_PRESSED:
+                pass
 
     # join commands and split them into a list of lowercase arguments
     commands = (''.join(command_list)).lower().split(' ')
-    command_list = []
-    for c in commands:
-        if c != '':
-            command_list.append(c)
-    return command_list
+    command_list = [c for c in commands if c != '']
+    return command_list if command_list else [""]
+
+
+def loading_screen(p) -> None:
+    # Get window dimensions
+    height, width = p.getmaxyx()
+
+    curses.start_color()
+    curses.init_pair(3, curses.COLOR_GREEN, curses.COLOR_BLACK)
+
+    # Define the cat ASCII art
+    cat = [
+        "                        _    ",
+        "                       | \\   ",
+        "                       | |   ",
+        "                       | |   ",
+        "  |\\                   | |   ",
+        " /, ~\\                / /    ",
+        "X     `-.....-------./ /     ",
+        " ~-. ~  ~              |     ",
+        "    \\             /    |     ",
+        "     \\  /_     ___\\   /     ",
+        "     | /\\ ~~~~~   \\ |      ",
+        "     | | \\        || |      ",
+        "     | |\\ \\       || )      ",
+        "    (_/ (_/      ((_/"
+    ]
+
+    text = [
+        " ______              ______               ",
+        "|  ___|             |  ___|              ",
+        "| |_ _   _ _ __ _ __| |____   _____ _ __ ",
+        "|  _| | | | '__| '__|  __\\ \\ / / _ \\ '__|",
+        "| | | |_| | |  | |  | |___\\ V /  __/ |   ",
+        "\\_|  \\__,_|_|  |_|  \\____/ \\_/ \\___|_|   ",
+        " ______ _                                ",
+        " |  __|(_)                               ",
+        " | |_   _ _ __   __ _ _ __   ___ ___     ",
+        " |  _| | | '_ \\ / _` | '_ \\ / __/ _ \\    ",
+        " | |   | | | | | (_| | | | | (_|  __/    ",
+        " \\_|   |_|_| |_|\\__,_|_| |_|\\___\\___|    "
+    ]
+
+    # Calculate starting position for the cat to be centered
+    start_y_text = (height - len(text)) // 2
+    start_x_text = 5
+    start_y_cat = (height - len(cat)) // 2
+    start_x_cat = int((width - len(cat[0])) // 1.5)
+
+    # Print the text
+    for i, line in enumerate(text):
+        p.addstr(start_y_text + i, start_x_text, line, curses.color_pair(3))
+
+    # Print the cat
+    for i, line in enumerate(cat):
+        p.addstr(start_y_cat + i, start_x_cat, line, curses.color_pair(3))
+
+    pad_pos_y, pad_pos_x = 3, 1  # Position to display pad in main window
+    p.refresh(0, 0, pad_pos_y, pad_pos_x, height, width)
 
 
 def main():
@@ -143,16 +203,45 @@ def main():
 
     # Create window with border
     main_window = curses.newwin(window_height, window_width, 0, 0)
-    main_window.border(9553, 9553, 9552, 9552, 9556, 9559, 9562, 9565)
-    main_window.refresh()
+    draw_main(main_window)
+
+    # Create CLI window
+    command_window = main_window.subwin(1, (window_width - 2), 1, 1)
+
+    # Create pad
+    pad_height = window_height - 5  # Height of pad (3 lines above and 2 lines below)
+    pad_width = window_width - 2  # Width of pad (considering border)
+    # pad = curses.newpad(pad_height, pad_width)
+    pad = curses.newpad(1000, pad_width)  # Set initial height larger
+
+    # Enable scrolling
+    pad.scrollok(True)
+
+    # Enable Mouse Inputs
+    curses.mousemask(-1)
+    curses.mouseinterval(0)
+
+    # Creating Welcome Screen with Cat
+    # loading_screen(pad)
+
+    # Begin Curses color
+    # curses.init_pair(1, curses.COLOR_CYAN, curses.COLOR_BLACK)
+    # curses.init_pair(2, curses.COLOR_WHITE, curses.COLOR_BLACK)
 
     # Get user input
     while True:
-        user_command = command_line(main_window, window_width)
-        execute_command(user_command)
-        main_window.refresh()
+        user_command = command_line(command_window, pad, window_height, window_width)
 
-        # Restore terminal settings
+        pad.clear()
+
+        execute_command(pad, user_command)
+
+        # Refresh entire pad in main window
+        pad_pos_y, pad_pos_x = 3, 1  # Position to display pad in main window
+        pad.refresh(PAD_Y, 0, pad_pos_y, pad_pos_x, pad_pos_y + window_height - 5, pad_pos_x + window_width - 2)
+
+        command_window.clear()
+
         print(user_command)
 
     # Restore terminal settings
@@ -167,6 +256,3 @@ def main():
 # Run
 if __name__ == "__main__":
     main()
-
-    # except KeyboardInterrupt:
-    #    pass
