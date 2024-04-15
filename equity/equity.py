@@ -20,6 +20,12 @@ class Equity:
         self.TICKER = ticker
 
     def execute_command(self, p, command: list) -> None:
+
+        curses.init_pair(3, curses.COLOR_GREEN, curses.COLOR_BLACK)
+        curses.init_pair(4, curses.COLOR_RED, curses.COLOR_BLACK)
+        curses.init_pair(6, curses.COLOR_MAGENTA, curses.COLOR_BLACK)
+        curses.init_pair(10, curses.COLOR_WHITE, curses.COLOR_BLACK)
+
         command_mappings = {
             "load": lambda: (self.equity_command_load(p, command)),
             "des": lambda: (self.equity_command_des(p, command)),
@@ -45,10 +51,6 @@ class Equity:
 
     @staticmethod
     def equity_invalid_command(p, command: list) -> None:
-
-        curses.init_pair(4, curses.COLOR_RED, curses.COLOR_BLACK)
-        curses.init_pair(3, curses.COLOR_GREEN, curses.COLOR_BLACK)
-        curses.init_pair(10, curses.COLOR_WHITE, curses.COLOR_BLACK)
 
         arguments = ' '.join(f'<{arg}>' for arg in command)
         invalid_usage = f"Invalid Command Usage >>> {arguments}"
@@ -84,9 +86,6 @@ class Equity:
             command (list): list of command arguments
 
         """
-
-        curses.init_pair(10, curses.COLOR_WHITE, curses.COLOR_BLACK)
-        curses.init_pair(6, curses.COLOR_MAGENTA, curses.COLOR_BLACK)
 
         try:
             ticker = command[2]

@@ -31,7 +31,7 @@ def invalid_command(p, command: list) -> None:
     message = f"Invalid Command >>> {command[0]}"
     message_length = len(message)
 
-    start_y = (pad_height - 6) // 2  # 6 offset y
+    start_y = 5
     start_x = max((pad_width - message_length) // 2, 2)
 
     p.addstr(start_y, start_x, message, curses.color_pair(4))
@@ -63,7 +63,7 @@ def draw_main(w) -> None:
     w.refresh()
 
 
-def command_line(w, p, window_height: int, window_width: int) -> list:
+def command_line(w, p, window_height: int, window_width: int):
     global PAD_Y
 
     # Don't echo user's keystrokes
@@ -115,14 +115,19 @@ def command_line(w, p, window_height: int, window_width: int) -> list:
                 w.move(cursor_y + cursor_y_offset, cursor_x + 1)
 
         elif key == curses.KEY_DOWN:
-            print(PAD_Y)
             PAD_Y += 1
-            print(PAD_Y)
+            p.touchwin()
             p.refresh(PAD_Y, 0, pad_pos_y, pad_pos_x, pad_pos_y + window_height - 5, pad_pos_x + window_width - 2)
+            redraw_pad_with_color(p, pad_pos_y, pad_pos_x, window_height, window_width)
+
 
         elif key == curses.KEY_UP:
-            PAD_Y -= 1
-            p.refresh(PAD_Y, 0, pad_pos_y, pad_pos_x, pad_pos_y + window_height - 5, pad_pos_x + window_width - 2)
+            if PAD_Y > 0:
+                PAD_Y -= 1
+                p.touchwin()
+                p.refresh(PAD_Y, 0, pad_pos_y, pad_pos_x, pad_pos_y + window_height - 5, pad_pos_x + window_width - 2)
+                redraw_pad_with_color(p, pad_pos_y, pad_pos_x, window_height, window_width)
+
 
         elif key == curses.KEY_MOUSE:
             _, x, y, _, bstate = curses.getmouse()
@@ -176,9 +181,11 @@ def loading_screen(p) -> None:
     ]
 
     # Calculate starting position for the cat to be centered
-    start_y_text = (height - len(text)) // 2
+    # start_y_text = (height - len(text)) // 2
+    start_y_text = 5
     start_x_text = 5
-    start_y_cat = (height - len(cat)) // 2
+    # start_y_cat = (height - len(cat)) // 2
+    start_y_cat = 5
     start_x_cat = int((width - len(cat[0])) // 1.5)
 
     # Print the text
@@ -189,8 +196,6 @@ def loading_screen(p) -> None:
     for i, line in enumerate(cat):
         p.addstr(start_y_cat + i, start_x_cat, line, curses.color_pair(3))
 
-    pad_pos_y, pad_pos_x = 3, 1  # Position to display pad in main window
-    p.refresh(0, 0, pad_pos_y, pad_pos_x, height, width)
 
 
 def main():
@@ -222,11 +227,13 @@ def main():
     curses.mouseinterval(0)
 
     # Creating Welcome Screen with Cat
-    # loading_screen(pad)
+    loading_screen(pad)
+    pad_pos_y, pad_pos_x = 3, 1  # Position to display pad in main window
+    pad.refresh(PAD_Y, 0, pad_pos_y, pad_pos_x, pad_pos_y + window_height - 5, pad_pos_x + window_width - 2)
+
 
     # Begin Curses color
-    # curses.init_pair(1, curses.COLOR_CYAN, curses.COLOR_BLACK)
-    # curses.init_pair(2, curses.COLOR_WHITE, curses.COLOR_BLACK)
+    #
 
     # Get user input
     while True:
