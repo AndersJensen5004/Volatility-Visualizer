@@ -41,16 +41,16 @@ class Equity:
     def execute_command(self, output, args: list) -> None:
 
         command_mappings = {
-            "load": lambda: (self.equity_command_load(output, args)),
-            "des": lambda: (self.equity_command_des(output, args)),
-            "stat": lambda: (self.equity_command_stat(output, args)),
-            "cn": lambda: (self.equity_command_cn(output, args)),
-            "gp": lambda: (self.equity_command_gp(output, args)),
-            "gip": lambda: (self.equity_command_gip(output, args)),
-            "dvd": lambda: (self.equity_command_dvd(output, args)),
-            "ern": lambda: (self.equity_command_ern(output, args)),
-            "fa": lambda: (self.equity_command_fa(output, args)),
-            "_default": lambda: (self.equity_invalid_command(output, args)),
+            "load": lambda: self.equity_command_load(output, args),
+            "des": lambda: self.equity_command_des(output, args),
+            "stat": lambda: self.equity_command_stat(output, args),
+            "cn": lambda: self.equity_command_cn(output, args),
+            "gp": lambda: self.equity_command_gp(output, args),
+            "gip": lambda: self.equity_command_gip(output, args),
+            "dvd": lambda: self.equity_command_dvd(output, args),
+            "ern": lambda: self.equity_command_ern(output, args),
+            "fa": lambda: self.equity_command_fa(output, args),
+            "_default": lambda: self.equity_invalid_command(output, args),
         }
         # Second Argument
         try:
@@ -84,7 +84,7 @@ class Equity:
         output_text.tag_configure("red_tag", foreground="#a82d3c")
 
         arguments = ' '.join(f'<{arg}>' for arg in args)
-        invalid_usage = f"Invalid Command Usage >>> {arguments}" + "\n"
+        invalid_usage = f"Invalid Command Usage >>> {arguments}\n"
 
         output_text.insert(tk.END, invalid_usage, "red_tag")
 
@@ -131,6 +131,7 @@ class Equity:
         output_text.config(state="disabled")
 
     def equity_command_des(self, output, args: list) -> None:
+
         description_text = tk.Text(output, height=10, width=80, font=('Poppins', 12), wrap='word', highlightthickness=0,
                                    bd=0, background="#b3b2af")
         description_text.pack(expand=True, fill='both', padx=8, pady=6)
@@ -228,6 +229,23 @@ class Equity:
                                       background="#b3b2af")
         estimates_data_text.grid(row=0, column=2, padx=5, pady=6, sticky='nsew')
         estimates_data_text.insert(tk.END, "Estimates")
+        target_high_price = info["targetHighPrice"]
+        target_low_price = info["targetLowPrice"]
+        target_mean_price = info["targetMeanPrice"]
+        target_median_price = info["targetMedianPrice"]
+        recommendation_key = info["recommendationKey"]
+        number_of_estimates = info["numberOfAnalystOpinions"]
+        estimate_data = [
+            ("Target High", f"{format_price(target_high_price)}"),
+            ("Target Low", f"{format_price(target_low_price)}"),
+            ("Target Mean", f"{format_price(target_mean_price)}"),
+            ("Target Median", f"{format_price(target_median_price)}"),
+            ("Recommendation", recommendation_key),
+            ("Number of Estimates", number_of_estimates)
+        ]
+        for label, value in estimate_data:
+            estimates_data_text.insert(tk.END, label.ljust(20), "orange_tag")
+            estimates_data_text.insert(tk.END, value + '\n', "black_tag_right")
 
     def equity_command_stat(self, p, command: list) -> None:
         pass
