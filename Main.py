@@ -1,265 +1,126 @@
-# Imports
-import os
-import time
-import curses
-import threading
-from curses import *
-# Class Imports
-from equity import *
-from exit.exit import Exit
+import tkinter as tk
+from tkinter import ttk
+from ctypes import windll
+from PIL import Image, ImageTk
 
+from equity import Equity
 
 # Initialize Instances
 equity_instance = Equity(None)
 
-PAD_Y: int = 0
+
+def invalid_command(output, args):
+    output_text = tk.Text(output, height=20, width=80, font=('Poppins', 14), wrap='word', highlightthickness=0, bd=0,
+                          background="#b3b2af")
+    output_text.pack(expand=True, fill='both', padx=8, pady=6)
+    output_text.tag_configure("red_tag_center", foreground="#a82d3c", justify="center")
+    output_text.insert(tk.END, "\n\nInvalid Command >>> " + ' '.join(args) + "\n", "red_tag_center")
+    output_text.config(state="disabled")
 
 
-def invalid_command(p, command: list) -> None:
+def get_command() -> list:
     """
-    Prints out invalid command in terminal
-
-    Args:
-        p: curses pad
-        command (list): list of command arguments
-
-    Returns: Nothing
-
+    Parses and returns the user-entered command as a list of lowercase words.
     """
-    curses.init_pair(4, curses.COLOR_RED, curses.COLOR_BLACK)
-    pad_height, pad_width = p.getmaxyx()
-    message = f"Invalid Command >>> {command[0]}"
-    message_length = len(message)
-
-    start_y = 5
-    start_x = max((pad_width - message_length) // 2, 2)
-
-    p.addstr(start_y, start_x, message, curses.color_pair(4))
+    command = command_entry.get().lower().strip()
+    return command.split() if command else [""]
 
 
-def execute_command(p, command: list) -> None:
-    """Executes commands from CLI with separate method calls
+def execute_command(event, output):
+    args = get_command()
 
-    Args:
-        p: curses pad
-        command (list): list of command arguments
+    # Clear the output before each command execution
+    for widget in output.winfo_children():
+        widget.destroy()
 
-    """
-
-    command_mappings = {
-        "equity": lambda: (equity_instance.execute_command(p, command)),
-        "close": lambda: (exit()),
-        "_default": lambda: (invalid_command(p, command)),
+    commands = {
+        "equity": lambda: equity_instance.execute_command(output, args),
+        "close": lambda: exit(),
+        "_default": lambda: invalid_command(output, args),
     }
 
-    command_function = command_mappings.get(command[0], command_mappings["_default"])
-
-    # Execute
-    command_function()
-
-
-def draw_main(w) -> None:
-    w.border(9553, 9553, 9552, 9552, 9556, 9559, 9562, 9565)
-    w.refresh()
+    selected_command = commands.get(args[0], commands["_default"])
+    selected_command()
+    command_entry.delete(0, tk.END)
+    return 'break'
 
 
-def command_line(w, p, window_height: int, window_width: int):
-    global PAD_Y
+def loading_screen(output) -> None:
+    """
+    Displays an image on the output widget.
+    """
+    output_text = tk.Text(output, height=1, width=80, font=('Poppins', 12), wrap='word', highlightthickness=0, bd=0,
+                          background="#b3b2af")
+    output_text.pack(expand=True, fill='both', padx=8, pady=6)
 
-    # Don't echo user's keystrokes
-    curses.noecho()
+    image = Image.open("equity_cat.jpg")  # Replace "equity_cat.jpg" with your image file path
+    photo = ImageTk.PhotoImage(image)
+    label = tk.Label(output, image=photo)
+    label.image = photo
+    label.pack()
 
-    height, width = w.getmaxyx()
-    pad_pos_y, pad_pos_x = 3, 1  # Position to display pad in main window
-
-    # Enable keypad mode for special keys
-    w.keypad(True)
-
-    curses.start_color()
-    curses.init_pair(1, curses.COLOR_CYAN, curses.COLOR_BLACK)
-
-    w.addstr(0, 0, ">>> ", curses.color_pair(1))  # CLI
-
-    # Initialize the command string
-    command_list = []
-    cursor_x = 3  # Adjust cursor position
-    cursor_y = 1
-    cursor_y_offset = -1
-
-    while True:
-        # Get user input
-        key = w.get_wch()
-        try:
-            key_value = ord(key)
-        except TypeError:
-            key_value = -1
-        # Handling special keys
-        if key == curses.KEY_ENTER or key_value in [10, 13]:
-            break
-
-        # IN WINDOWS IT'S 8 I DON'T KNOW WHAT THE OTHER NUMBERS ARE
-        elif key == curses.KEY_BACKSPACE or key_value == 127 or key_value == 22 or key_value == 8:
-            if len(command_list) > 0:  # Adjust position
-                command_list.pop()
-                cursor_x -= 1
-                w.addch(cursor_y + cursor_y_offset, cursor_x + 1, " ")  # Clear character
-                w.refresh()
-                w.move(cursor_y + cursor_y_offset, cursor_x + 1)
-
-        elif 32 <= key_value <= 126:  # Printable characters
-            if len(command_list) < (width - 6):  # Not allowing user to overflow window
-                command_list.append(chr(key_value))
-                w.addch(cursor_y + cursor_y_offset, cursor_x + 1, chr(key_value))
-                cursor_x += 1
-                w.refresh()
-                w.move(cursor_y + cursor_y_offset, cursor_x + 1)
-
-        elif key == curses.KEY_DOWN:
-            PAD_Y += 1
-            p.touchwin()
-            p.refresh(PAD_Y, 0, pad_pos_y, pad_pos_x, pad_pos_y + window_height - 5, pad_pos_x + window_width - 2)
-            redraw_pad_with_color(p, pad_pos_y, pad_pos_x, window_height, window_width)
-
-
-        elif key == curses.KEY_UP:
-            if PAD_Y > 0:
-                PAD_Y -= 1
-                p.touchwin()
-                p.refresh(PAD_Y, 0, pad_pos_y, pad_pos_x, pad_pos_y + window_height - 5, pad_pos_x + window_width - 2)
-                redraw_pad_with_color(p, pad_pos_y, pad_pos_x, window_height, window_width)
-
-
-        elif key == curses.KEY_MOUSE:
-            _, x, y, _, bstate = curses.getmouse()
-            if bstate & curses.BUTTON1_PRESSED:
-                pass
-
-    # join commands and split them into a list of lowercase arguments
-    commands = (''.join(command_list)).lower().split(' ')
-    command_list = [c for c in commands if c != '']
-    return command_list if command_list else [""]
-
-
-def loading_screen(p) -> None:
-    # Get window dimensions
-    height, width = p.getmaxyx()
-
-    curses.start_color()
-    curses.init_pair(3, curses.COLOR_GREEN, curses.COLOR_BLACK)
-
-    # Define the cat ASCII art
-    cat = [
-        "                        _    ",
-        "                       | \\   ",
-        "                       | |   ",
-        "                       | |   ",
-        "  |\\                   | |   ",
-        " /, ~\\                / /    ",
-        "X     `-.....-------./ /     ",
-        " ~-. ~  ~              |     ",
-        "    \\             /    |     ",
-        "     \\  /_     ___\\   /     ",
-        "     | /\\ ~~~~~   \\ |      ",
-        "     | | \\        || |      ",
-        "     | |\\ \\       || )      ",
-        "    (_/ (_/      ((_/"
-    ]
-
-    text = [
-        " ______              ______               ",
-        "|  ___|             |  ___|              ",
-        "| |_ _   _ _ __ _ __| |____   _____ _ __ ",
-        "|  _| | | | '__| '__|  __\\ \\ / / _ \\ '__|",
-        "| | | |_| | |  | |  | |___\\ V /  __/ |   ",
-        "\\_|  \\__,_|_|  |_|  \\____/ \\_/ \\___|_|   ",
-        " ______ _                                ",
-        " |  __|(_)                               ",
-        " | |_   _ _ __   __ _ _ __   ___ ___     ",
-        " |  _| | | '_ \\ / _` | '_ \\ / __/ _ \\    ",
-        " | |   | | | | | (_| | | | | (_|  __/    ",
-        " \\_|   |_|_| |_|\\__,_|_| |_|\\___\\___|    "
-    ]
-
-    # Calculate starting position for the cat to be centered
-    # start_y_text = (height - len(text)) // 2
-    start_y_text = 5
-    start_x_text = 5
-    # start_y_cat = (height - len(cat)) // 2
-    start_y_cat = 5
-    start_x_cat = int((width - len(cat[0])) // 1.5)
-
-    # Print the text
-    for i, line in enumerate(text):
-        p.addstr(start_y_text + i, start_x_text, line, curses.color_pair(3))
-
-    # Print the cat
-    for i, line in enumerate(cat):
-        p.addstr(start_y_cat + i, start_x_cat, line, curses.color_pair(3))
-
-
+    output_text.tag_configure("bold_center", foreground="#35a60c", justify="center", font=("Poppins", 30, "bold"))
+    output_text.insert(tk.END, "\n>>> FurEver Finance Terminal\n", "bold_center")
+    output_text.config(state='disabled')
 
 def main():
-    stdscr = curses.initscr()
-    curses.cbreak()
-    stdscr.keypad(True)
 
-    # Define window size and position
-    window_height, window_width = stdscr.getmaxyx()
+    # Set the process to be DPI aware
+    try:
+        pass
+        windll.shcore.SetProcessDpiAwareness(1)
+    except AttributeError:
+        pass
 
-    # Create window with border
-    main_window = curses.newwin(window_height, window_width, 0, 0)
-    draw_main(main_window)
+    root = tk.Tk()
+    root.geometry("1400x800")
+    root.title("FurEver Finance Terminal")
 
-    # Create CLI window
-    command_window = main_window.subwin(1, (window_width - 2), 1, 1)
+    y_spacing = 6
 
-    # Create pad
-    pad_height = window_height - 5  # Height of pad (3 lines above and 2 lines below)
-    pad_width = window_width - 2  # Width of pad (considering border)
-    # pad = curses.newpad(pad_height, pad_width)
-    pad = curses.newpad(1000, pad_width)  # Set initial height larger
+    # Set the overall background color to a dark shade
+    root.configure(bg="#222222")
 
-    # Enable scrolling
-    pad.scrollok(True)
+    # Configure the style to use a dark theme
+    style = ttk.Style()
+    style.theme_use('clam')
+    style.configure('TLabel', foreground='white', background='#222222', font=('Poppins', 12))
+    style.configure('TEntry', foreground='white', fieldbackground='#333333', background='#333333', borderwidth=0,
+                    bordercolor='#333333', relief='flat', font=('Poppins', 12))
+    style.configure('TFrame', background='#222222')
+    style.configure('TText', foreground='#454441', background='#444444', font=('Poppins', 12))
 
-    # Enable Mouse Inputs
-    curses.mousemask(-1)
-    curses.mouseinterval(0)
+    # Create a frame for the command line
+    command_frame = ttk.Frame(root)
+    command_frame.pack(pady=y_spacing)
 
-    # Creating Welcome Screen with Cat
-    loading_screen(pad)
-    pad_pos_y, pad_pos_x = 3, 1  # Position to display pad in main window
-    pad.refresh(PAD_Y, 0, pad_pos_y, pad_pos_x, pad_pos_y + window_height - 5, pad_pos_x + window_width - 2)
+    # Create a label and entry for the command line
+    command_label = ttk.Label(command_frame, text=">>>", font=('Poppins', 12, 'bold'), foreground='#5ca9fa')
+    command_label.pack(side=tk.LEFT)
 
+    global command_entry
+    command_entry = ttk.Entry(command_frame, width=90, font=('Poppins', 12), style='Custom.TEntry')
+    command_entry.pack(side=tk.LEFT, padx=5)
 
-    # Begin Curses color
-    #
+    # Create a frame to act as the output area
+    global output_frame
+    output_frame = ttk.Frame(root, height=400, width=800, style='Output.TFrame')
+    output_frame.pack(expand=True, fill='both', padx=8, pady=y_spacing)
 
-    # Get user input
-    while True:
-        user_command = command_line(command_window, pad, window_height, window_width)
+    # Bind Enter to execute command
+    command_entry.bind('<Return>', lambda event: execute_command(event, output_frame))
 
-        pad.clear()
+    # Run the loading screen
+    loading_screen(output_frame)
 
-        execute_command(pad, user_command)
-
-        # Refresh entire pad in main window
-        pad_pos_y, pad_pos_x = 3, 1  # Position to display pad in main window
-        pad.refresh(PAD_Y, 0, pad_pos_y, pad_pos_x, pad_pos_y + window_height - 5, pad_pos_x + window_width - 2)
-
-        command_window.clear()
-
-        print(user_command)
-
-    # Restore terminal settings
-    curses.echo()
-    curses.nocbreak()
-    stdscr.keypad(False)
-    curses.endwin()
-
-    # Return the command entered by the user
+    # Embed a button in the text widget
+    # button_in_text = ttk.Button(output_text, text="Button in Text", command=lambda: print("Button clicked"))
+    # output_text.window_create(tk.END, window=button_in_text)
 
 
-# Run
+    # Run the application
+    root.mainloop()
+
+
 if __name__ == "__main__":
     main()

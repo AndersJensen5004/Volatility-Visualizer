@@ -1,4 +1,5 @@
-import curses
+import tkinter as tk
+from tkinter import ttk
 import yfinance as yf
 
 equity_commands = [
@@ -14,115 +15,219 @@ equity_commands = [
 ]
 
 
+def format_number(number: int) -> str:
+    if number >= 1e9:
+        return f"{number / 1e9:.2f}B"
+    elif number >= 1e6:
+        return f"{number / 1e6:.2f}M"
+    elif number >= 1e3:
+        return f"{number / 1e3:.2f}K"
+    else:
+        return f"{number:.2f}"
+
+
+def format_price(price: float) -> str:
+    if price >= 1:
+        return f"${price:.2f}"
+    else:
+        return f"${price:.4f}"
+
+
 class Equity:
 
     def __init__(self, ticker):
         self.TICKER = ticker
 
-    def execute_command(self, p, command: list) -> None:
-
-        curses.init_pair(3, curses.COLOR_GREEN, curses.COLOR_BLACK)
-        curses.init_pair(4, curses.COLOR_RED, curses.COLOR_BLACK)
-        curses.init_pair(6, curses.COLOR_MAGENTA, curses.COLOR_BLACK)
-        curses.init_pair(10, curses.COLOR_WHITE, curses.COLOR_BLACK)
+    def execute_command(self, output, args: list) -> None:
 
         command_mappings = {
-            "load": lambda: (self.equity_command_load(p, command)),
-            "des": lambda: (self.equity_command_des(p, command)),
-            "stat": lambda: (self.equity_command_stat(p, command)),
-            "cn": lambda: (self.equity_command_cn(p, command)),
-            "gp": lambda: (self.equity_command_gp(p, command)),
-            "gip": lambda: (self.equity_command_gip(p, command)),
-            "dvd": lambda: (self.equity_command_dvd(p, command)),
-            "ern": lambda: (self.equity_command_ern(p, command)),
-            "fa": lambda: (self.equity_command_fa(p, command)),
-            "_default": lambda: (self.equity_invalid_command(p, command)),
+            "load": lambda: (self.equity_command_load(output, args)),
+            "des": lambda: (self.equity_command_des(output, args)),
+            "stat": lambda: (self.equity_command_stat(output, args)),
+            "cn": lambda: (self.equity_command_cn(output, args)),
+            "gp": lambda: (self.equity_command_gp(output, args)),
+            "gip": lambda: (self.equity_command_gip(output, args)),
+            "dvd": lambda: (self.equity_command_dvd(output, args)),
+            "ern": lambda: (self.equity_command_ern(output, args)),
+            "fa": lambda: (self.equity_command_fa(output, args)),
+            "_default": lambda: (self.equity_invalid_command(output, args)),
         }
         # Second Argument
         try:
-            command_function = command_mappings.get(command[1], command_mappings["_default"])
+            command_function = command_mappings.get(args[1], command_mappings["_default"])
         except IndexError:
             if self.TICKER is None:
                 command_function = command_mappings["_default"]
             else:
-                command_function = lambda: (self.equity_command_load(p, ["equity", "load", self.TICKER]))
+                command_function = lambda: (self.equity_command_load(output, ["equity", "load", self.TICKER]))
         # Execute
         command_function()
 
     @staticmethod
-    def equity_invalid_command(p, command: list) -> None:
-
-        arguments = ' '.join(f'<{arg}>' for arg in command)
-        invalid_usage = f"Invalid Command Usage >>> {arguments}"
-        invalid_y, invalid_x = p.getmaxyx()
-        # **CHANGED invalid_y TO 9 TESTING PAD**
-        invalid_y = 9
-        # Center horizontally, ensuring invalid_x is non-negative
-        invalid_x = max((invalid_x - len(invalid_usage)) // 2, 0)
-        p.addstr(invalid_y // 3, invalid_x, invalid_usage, curses.color_pair(4))
-
-        correct_usage = [
-            "Use <equity> <load> <TICKER>",
-            "OR <equity> <load> <TICKER> <menu>",
-            "OR <equity> <menu>"
-        ]
-        correct_y = (invalid_y // 3) + 2  # Place correct usage below invalid usage
-        correct_x = (invalid_x + 4)  # Indent correct usage slightly
-        for usage in correct_usage:
-            p.addstr(correct_y, correct_x, usage, curses.color_pair(3))
-            correct_y += 1
-
-        description_y = correct_y + 2  # Place descriptions below correct usage
-        description_x = 1  # Left-align descriptions
-        for c in equity_commands:
-            p.addstr(description_y, description_x, c, curses.color_pair(10))
-            description_y += 1
-
-    def equity_command_load(self, p, command: list) -> None:
-        """Loads a symbol main menu for commands
+    def equity_invalid_command(output, args: list) -> None:
+        """
+        Handles an invalid command for equity and displays the correct usage in the output widget.
 
         Args:
-            p (curses pad): curses pad
-            command (list): list of command arguments
+            output (tkinter.Frame): The output widget to display the invalid command and correct usage.
+            args (list): The list of invalid command arguments.
 
+        Returns:
+            None
         """
+        output_text = tk.Text(output, height=20, width=80, font=('Poppins', 12), wrap='word', highlightthickness=0,
+                              bd=0,
+                              background="#b3b2af")
+        output_text.pack(expand=True, fill='both', padx=8, pady=6)
 
+        output_text.tag_configure("green_tag", foreground="#0b9925")
+        output_text.tag_configure("red_tag", foreground="#a82d3c")
+
+        arguments = ' '.join(f'<{arg}>' for arg in args)
+        invalid_usage = f"Invalid Command Usage >>> {arguments}" + "\n"
+
+        output_text.insert(tk.END, invalid_usage, "red_tag")
+
+        correct_usage = [
+            "\nUse <equity> <load> <TICKER>",
+            "OR <equity> <load> <TICKER> <menu>",
+            "OR <equity> <menu>\n"
+        ]
+        for line in correct_usage:
+            output_text.insert(tk.END, line + "\n", "green_tag")
+        for line in equity_commands:
+            output_text.insert(tk.END, line + "\n")
+        output_text.config(state="disabled")
+
+    def equity_command_load(self, output, args: list) -> None:
         try:
-            ticker = command[2]
+            ticker = args[2]
         except IndexError:
-            self.equity_invalid_command(p, command)
+            self.equity_invalid_command(output, args)
             return
 
-        self.TICKER = ticker.upper()
-        price = yf.Ticker(self.TICKER).history(period='1d').iloc[-1].Close
-        if price > 1:
-            price_string = f"${price:.2f}"
-        else:
-            price_string = f"${price:.4f}"
+        output_text = tk.Text(output, height=20, width=80, font=('Poppins', 12), wrap='word', highlightthickness=0,
+                              bd=0,
+                              background="#b3b2af")
+        output_text.pack(expand=True, fill='both', padx=8, pady=6)
 
+        # Get ticker symbol
+        self.TICKER = ticker.upper()
+
+        # Get price
+        price = yf.Ticker(self.TICKER).history(period='1d').iloc[-1].Close
+        price_string = format_price(price)
         data = [
             f"LOADED <{self.TICKER}>",
             price_string,
         ]
-
-        # Print data centered and in orange
-        data_y, data_x = p.getmaxyx()
-        data_x = (data_x - max(len(line) for line in data)) // 2  # Center horizontally
-        center_y = data_y // 6
+        output_text.tag_configure("blue_tag_center", foreground="#25768a", justify="center",
+                                  font=("Poppins", 12, "bold"))
+        output_text.tag_configure("green_tag", foreground="#0b9925")
         for line in data:
-            p.addstr(center_y, data_x, line, curses.color_pair(6))
-            center_y += 1
+            output_text.insert(tk.END, line + "\n", "blue_tag_center")
+        for line in equity_commands:
+            output_text.insert(tk.END, line + "\n", "green_tag")
+        output_text.config(state="disabled")
 
-        # Print descriptions in white
-        description_y = center_y + 2  # Place descriptions below data
-        description_x = 1  # Left-align descriptions
-        for c in equity_commands:
-            p.addstr(description_y, description_x, c, curses.color_pair(10))
-            description_y += 1
+    def equity_command_des(self, output, args: list) -> None:
+        description_text = tk.Text(output, height=10, width=80, font=('Poppins', 12), wrap='word', highlightthickness=0,
+                                   bd=0, background="#b3b2af")
+        description_text.pack(expand=True, fill='both', padx=8, pady=6)
 
-    def equity_command_des(self, p, command: list) -> None:
         info = yf.Ticker(self.TICKER).info
-        pass
+        name = info["longName"]
+        description = info["longBusinessSummary"]
+        industry = info["industry"]
+
+        description_text.tag_configure("blue_tag_bold", foreground="#25768a", font=("Poppins", 12, "bold"))
+        description_text.tag_configure("orange_tag", foreground="#b38405")
+        description_text.tag_configure("orange_tag_right", foreground="#b38405", justify="right")
+        description_text.tag_configure("black_tag", foreground="#242322")
+        description_text.tag_configure("blue_tag", foreground="#216ccf")
+
+        description_text.insert(tk.END, name + "\n", "blue_tag_bold")
+        description_text.insert(tk.END, "Industry: ", "orange_tag_right")
+        description_text.insert(tk.END, industry + "\n", "black_tag")
+        description_text.insert(tk.END, description + "\n", "orange_tag")
+
+        # Create the summary info text box
+        summary_frame = ttk.Frame(output)
+        summary_frame.pack(pady=5, expand=True, fill='both')
+
+        # Price Data
+        price_data_text = tk.Text(summary_frame, height=10, width=40, font=('Poppins', 12), wrap='word',
+                                  highlightthickness=0, bd=0,
+                                  background="#b3b2af")
+        price_data_text.grid(row=0, column=0, padx=5, pady=6, sticky='nsew')
+        price_data_text.tag_configure("blue_tag_bold", foreground="#25768a", font=("Poppins", 12, "bold"))
+        price_data_text.tag_configure("orange_tag", foreground="#b38405", justify="left")
+        price_data_text.tag_configure("orange_tag_right", foreground="#b38405", justify="right")
+        price_data_text.tag_configure("black_tag_right", foreground="#242322", justify="right")
+        price_data_text.tag_configure("blue_tag", foreground="#216ccf")
+
+        # Add price data labels to price_data_frame
+        currency = info["currency"]
+        price_change = info["regularMarketOpen"] - info["regularMarketPreviousClose"]
+        percent_change = price_change / info["regularMarketPreviousClose"] * 100
+        fifty_two_week_high = info["fiftyTwoWeekHigh"]
+        fifty_two_week_low = info["fiftyTwoWeekLow"]
+        market_cap = info["marketCap"]
+        shares_outstanding = info["sharesOutstanding"]
+        float_shares = info["floatShares"]
+        short_interest = info["sharesShort"]
+        short_percent = info["shortPercentOfFloat"] * 100
+        days_to_cover = short_interest / info["averageVolume"]
+        price_data = [
+            ("Price Change 1D", f"{format_price(price_change)}/{percent_change:.2f}%"),
+            ("52 Week High", f"{format_price(fifty_two_week_high)}"),
+            ("52 Week Low", f"{format_price(fifty_two_week_low)}"),
+            ("Market Cap", format_number(market_cap)),
+            ("Shares Out/Float", f"{format_number(shares_outstanding)}/{format_number(float_shares)}"),
+            ("SI/% of Float", f"{format_number(short_interest)}/{short_percent:.2f}%"),
+            ("Days to Cover", f"{days_to_cover:.2f}")
+        ]
+
+        for label, value in price_data:
+            price_data_text.insert(tk.END, label.ljust(20), "orange_tag")
+            price_data_text.insert(tk.END, value + '\n', "black_tag_right")
+
+        # Corporate Info
+        corporate_info_text = tk.Text(summary_frame, height=10, width=40, font=('Poppins', 12), wrap='word',
+                                      highlightthickness=0, bd=0,
+                                      background="#b3b2af")
+        corporate_info_text.grid(row=0, column=1, padx=5, pady=6, sticky='nsew')
+        corporate_info_text.tag_configure("blue_tag_bold", foreground="#25768a", font=("Poppins", 12, "bold"))
+        corporate_info_text.tag_configure("orange_tag", foreground="#b38405")
+        corporate_info_text.tag_configure("orange_tag_right", foreground="#b38405", justify="right")
+        corporate_info_text.tag_configure("black_tag", foreground="#242322")
+        corporate_info_text.tag_configure("blue_tag", foreground="#216ccf")
+
+        # Add corporate info labels to corporate_info_frame
+        website = info["website"]
+        location = ""
+        try:
+            location += info["city"] + ", "
+            location += info["state"] + ", "
+        except KeyError:
+            pass
+        try:
+            location += info["country"]
+        except KeyError:
+            pass
+        employees = info["fullTimeEmployees"]
+
+        corporate_info_text.insert(tk.END, website + "\n", "blue_tag")
+        corporate_info_text.insert(tk.END, location + "\n", "orange_tag")
+        corporate_info_text.insert(tk.END, "Employees ", "orange_tag")
+        corporate_info_text.insert(tk.END, employees, "black_tag")
+
+        # Other Data
+        estimates_data_text = tk.Text(summary_frame, height=15, width=40, font=('Poppins', 12), wrap='word',
+                                      highlightthickness=0, bd=0,
+                                      background="#b3b2af")
+        estimates_data_text.grid(row=0, column=2, padx=5, pady=6, sticky='nsew')
+        estimates_data_text.insert(tk.END, "Estimates")
 
     def equity_command_stat(self, p, command: list) -> None:
         pass
