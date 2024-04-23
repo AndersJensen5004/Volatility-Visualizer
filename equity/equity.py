@@ -228,7 +228,7 @@ class Equity:
                                       highlightthickness=0, bd=0,
                                       background="#b3b2af")
         estimates_data_text.grid(row=0, column=2, padx=5, pady=6, sticky='nsew')
-        estimates_data_text.insert(tk.END, "Estimates")
+        estimates_data_text.tag_configure("orange_tag", foreground="#b38405", justify="left")
         target_high_price = info["targetHighPrice"]
         target_low_price = info["targetLowPrice"]
         target_mean_price = info["targetMeanPrice"]
@@ -240,11 +240,11 @@ class Equity:
             ("Target Low", f"{format_price(target_low_price)}"),
             ("Target Mean", f"{format_price(target_mean_price)}"),
             ("Target Median", f"{format_price(target_median_price)}"),
-            ("Recommendation", recommendation_key),
-            ("Number of Estimates", number_of_estimates)
+            ("Recommendation", f"{recommendation_key}"),
+            ("Number of Estimates", f"{number_of_estimates}")
         ]
         for label, value in estimate_data:
-            estimates_data_text.insert(tk.END, label.ljust(20), "orange_tag")
+            estimates_data_text.insert(tk.END, label.ljust(30), "orange_tag")
             estimates_data_text.insert(tk.END, value + '\n', "black_tag_right")
 
     def equity_command_stat(self, p, command: list) -> None:
