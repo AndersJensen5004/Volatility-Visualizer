@@ -1,39 +1,42 @@
+import time
 import tkinter as tk
 from tkinter import ttk
 import yfinance as yf
 
-equity_commands = [
-    " LOAD - Loads equity",
-    " DES - Company description",
-    " STAT - Company statistics and info",
-    " CN - Company news",
-    " GP - Historical price chart",
-    " GIP - Intraday price chart",
-    " DVD - Dividend information",
-    " ERN - Earnings information and summary",
-    " FA - Financial Statements"
-]
-
-
-def format_number(number: int) -> str:
-    if number >= 1e9:
-        return f"{number / 1e9:.2f}B"
-    elif number >= 1e6:
-        return f"{number / 1e6:.2f}M"
-    elif number >= 1e3:
-        return f"{number / 1e3:.2f}K"
-    else:
-        return f"{number:.2f}"
-
-
-def format_price(price: float) -> str:
-    if price >= 1:
-        return f"${price:.2f}"
-    else:
-        return f"${price:.4f}"
-
 
 class Equity:
+
+    # Equity Commands
+    equity_commands = [
+        " LOAD - Loads equity",
+        " DES - Company description",
+        " STAT - Company statistics and info",
+        " CN - Company news",
+        " GP - Historical price chart",
+        " GIP - Intraday price chart",
+        " DVD - Dividend information",
+        " ERN - Earnings information and summary",
+        " FA - Financial Statements",
+        " FEED - Price feed"
+    ]
+
+    @staticmethod
+    def format_number(number: int) -> str:
+        if number >= 1e9:
+            return f"{number / 1e9:.2f}B"
+        elif number >= 1e6:
+            return f"{number / 1e6:.2f}M"
+        elif number >= 1e3:
+            return f"{number / 1e3:.2f}K"
+        else:
+            return f"{number:.2f}"
+
+    @staticmethod
+    def format_price(price: float) -> str:
+        if price >= 1:
+            return f"${price:.2f}"
+        else:
+            return f"${price:.4f}"
 
     def __init__(self, ticker):
         self.TICKER = ticker
@@ -50,6 +53,7 @@ class Equity:
             "dvd": lambda: self.equity_command_dvd(output, args),
             "ern": lambda: self.equity_command_ern(output, args),
             "fa": lambda: self.equity_command_fa(output, args),
+            "feed": lambda: self.equity_command_feed(output, args),
             "_default": lambda: self.equity_invalid_command(output, args),
         }
         # Second Argument
@@ -95,7 +99,7 @@ class Equity:
         ]
         for line in correct_usage:
             output_text.insert(tk.END, line + "\n", "green_tag")
-        for line in equity_commands:
+        for line in Equity.equity_commands:
             output_text.insert(tk.END, line + "\n")
         output_text.config(state="disabled")
 
@@ -116,7 +120,7 @@ class Equity:
 
         # Get price
         price = yf.Ticker(self.TICKER).history(period='1d').iloc[-1].Close
-        price_string = format_price(price)
+        price_string = Equity.format_price(price)
         data = [
             f"LOADED <{self.TICKER}>",
             price_string,
@@ -126,7 +130,7 @@ class Equity:
         output_text.tag_configure("green_tag", foreground="#0b9925")
         for line in data:
             output_text.insert(tk.END, line + "\n", "blue_tag_center")
-        for line in equity_commands:
+        for line in Equity.equity_commands:
             output_text.insert(tk.END, line + "\n", "green_tag")
         output_text.config(state="disabled")
 
@@ -180,12 +184,12 @@ class Equity:
         short_percent = info["shortPercentOfFloat"] * 100
         days_to_cover = short_interest / info["averageVolume"]
         price_data = [
-            ("Price Change 1D", f"{format_price(price_change)}/{percent_change:.2f}%"),
-            ("52 Week High", f"{format_price(fifty_two_week_high)}"),
-            ("52 Week Low", f"{format_price(fifty_two_week_low)}"),
-            ("Market Cap", format_number(market_cap)),
-            ("Shares Out/Float", f"{format_number(shares_outstanding)}/{format_number(float_shares)}"),
-            ("SI/% of Float", f"{format_number(short_interest)}/{short_percent:.2f}%"),
+            ("Price Change 1D", f"{Equity.format_price(price_change)}/{percent_change:.2f}%"),
+            ("52 Week High", f"{Equity.format_price(fifty_two_week_high)}"),
+            ("52 Week Low", f"{Equity.format_price(fifty_two_week_low)}"),
+            ("Market Cap", Equity.format_number(market_cap)),
+            ("Shares Out/Float", f"{Equity.format_number(shares_outstanding)}/{Equity.format_number(float_shares)}"),
+            ("SI/% of Float", f"{Equity.format_number(short_interest)}/{short_percent:.2f}%"),
             ("Days to Cover", f"{days_to_cover:.2f}")
         ]
 
@@ -236,10 +240,10 @@ class Equity:
         recommendation_key = info["recommendationKey"]
         number_of_estimates = info["numberOfAnalystOpinions"]
         estimate_data = [
-            ("Target High", f"{format_price(target_high_price)}"),
-            ("Target Low", f"{format_price(target_low_price)}"),
-            ("Target Mean", f"{format_price(target_mean_price)}"),
-            ("Target Median", f"{format_price(target_median_price)}"),
+            ("Target High", f"{Equity.format_price(target_high_price)}"),
+            ("Target Low", f"{Equity.format_price(target_low_price)}"),
+            ("Target Mean", f"{Equity.format_price(target_mean_price)}"),
+            ("Target Median", f"{Equity.format_price(target_median_price)}"),
             ("Recommendation", f"{recommendation_key}"),
             ("Number of Estimates", f"{number_of_estimates}")
         ]
@@ -247,23 +251,34 @@ class Equity:
             estimates_data_text.insert(tk.END, label.ljust(30), "orange_tag")
             estimates_data_text.insert(tk.END, value + '\n', "black_tag_right")
 
-    def equity_command_stat(self, p, command: list) -> None:
+    def equity_command_stat(self, output, command: list) -> None:
         pass
 
-    def equity_command_cn(self, p, command: list) -> None:
+    def equity_command_cn(self, output, command: list) -> None:
         pass
 
-    def equity_command_gp(self, p, command: list) -> None:
+    def equity_command_gp(self, output, command: list) -> None:
         pass
 
-    def equity_command_gip(self, p, command: list) -> None:
+    def equity_command_gip(self, output, command: list) -> None:
         pass
 
-    def equity_command_dvd(self, p, command: list) -> None:
+    def equity_command_dvd(self, output, command: list) -> None:
         pass
 
-    def equity_command_ern(self, p, command: list) -> None:
+    def equity_command_ern(self, output, command: list) -> None:
         pass
 
-    def equity_command_fa(self, p, command: list) -> None:
+    def equity_command_fa(self, output, command: list) -> None:
         pass
+
+    def equity_command_feed(self, output, command: list) -> None:
+        description_text = tk.Text(output, height=10, width=80, font=('Poppins', 12), wrap='word', highlightthickness=0,
+                                   bd=0, background="#b3b2af")
+        description_text.pack(expand=True, fill='both', padx=8, pady=6)
+        description_text.tag_configure("orange_tag", foreground="#b38405")
+        ticker = yf.Ticker(self.TICKER)
+        while True:
+            data = ticker.history(period="1d")["Close"].iloc[-1]
+            description_text.insert(tk.END, f"{data}\n", "orange_tag")
+            time.sleep(1)

@@ -2,6 +2,7 @@ import tkinter as tk
 from tkinter import ttk
 from ctypes import windll
 from PIL import Image, ImageTk
+import math
 
 from equity import Equity
 
@@ -45,23 +46,67 @@ def execute_command(event, output):
     return 'break'
 
 
+class LoadingSpinner(tk.Canvas):
+    def __init__(self, parent, dot_count=10, radius=40, dot_size=12, *args, **kwargs):
+        super().__init__(parent, width=2 * radius + dot_size * 2, height=2 * radius + dot_size * 2, bg="#15061c", bd=0,
+                         highlightthickness=0, *args, **kwargs)
+        self.dot_count = dot_count
+        self.radius = radius
+        self.dot_size = dot_size
+        self.angle_step = 360 / dot_count
+        self.dots = []
+
+        for i in range(dot_count):
+            angle = math.radians(i * self.angle_step)
+            x = radius + radius * math.cos(angle)
+            y = radius + radius * math.sin(angle)
+            dot = self.create_oval(x, y, x + dot_size, y + dot_size, fill="#dea404", outline="")
+            self.dots.append(dot)
+
+        self.current_dot = 0
+        self.animate()
+
+    def animate(self):
+        for i, dot in enumerate(self.dots):
+            if i == self.current_dot:
+                self.itemconfig(dot, fill="#dea404")
+            else:
+                self.itemconfig(dot, fill="#444444")
+
+        self.current_dot = (self.current_dot + 1) % self.dot_count
+        self.after(100, self.animate)
+
 def loading_screen(output) -> None:
     """
-    Displays an image on the output widget.
+    Displays a modern loading screen with an image and stylized text on the output widget.
     """
-    output_text = tk.Text(output, height=1, width=80, font=('Poppins', 12), wrap='word', highlightthickness=0, bd=0,
-                          background="#b3b2af")
-    output_text.pack(expand=True, fill='both', padx=8, pady=6)
+    # Clear the output widget before displaying the loading screen
+    for widget in output.winfo_children():
+        widget.destroy()
 
-    image = Image.open("equity_cat.jpg")  # Replace "equity_cat.jpg" with your image file path
+    # Load the image
+    image = Image.open("equity_cat.jpg")  # Replace with your image file path
+    image = image.resize((400, 400))  # Resize the image to fit better
     photo = ImageTk.PhotoImage(image)
-    label = tk.Label(output, image=photo)
-    label.image = photo
-    label.pack()
 
-    output_text.tag_configure("bold_center", foreground="#35a60c", justify="center", font=("Poppins", 30, "bold"))
-    output_text.insert(tk.END, "\n>>> FurEver Finance Terminal\n", "bold_center")
-    output_text.config(state='disabled')
+    # Create a label to display the image
+    image_label = tk.Label(output, image=photo, bg="#15061c")
+    image_label.image = photo  # Store a reference to the image to prevent it from being garbage collected
+    image_label.pack(pady=(50, 20))
+
+    # Create a label to display the main title
+    title_label = tk.Label(output, text=">>> FurEver Finance Terminal", fg="#dea404", bg="#15061c",
+                           font=("Poppins", 30, "bold"))
+    title_label.pack()
+
+    # Create a label to display the subtitle
+    subtitle_label = tk.Label(output, text="@EquityCats", fg="#5ca9fa", bg="#15061c",
+                              font=("Poppins", 15, "italic"))
+    subtitle_label.pack(pady=(10, 30))
+
+    # Add the loading spinner
+    spinner = LoadingSpinner(output)
+    spinner.pack(pady=(0, 30))
 
 def main():
 
@@ -73,22 +118,22 @@ def main():
         pass
 
     root = tk.Tk()
-    root.geometry("1400x800")
+    root.geometry("1400x900")
     root.title("FurEver Finance Terminal")
 
-    y_spacing = 6
+    y_spacing = 5
 
     # Set the overall background color to a dark shade
-    root.configure(bg="#222222")
+    root.configure(bg="#15061c")
 
     # Configure the style to use a dark theme
     style = ttk.Style()
     style.theme_use('clam')
-    style.configure('TLabel', foreground='white', background='#222222', font=('Poppins', 12))
-    style.configure('TEntry', foreground='white', fieldbackground='#333333', background='#333333', borderwidth=0,
+    style.configure('TLabel', foreground='white', background='#15061c', font=('Poppins', 12))
+    style.configure('TEntry', foreground='white', fieldbackground='#15061c', background='#15061c', borderwidth=0,
                     bordercolor='#333333', relief='flat', font=('Poppins', 12))
-    style.configure('TFrame', background='#222222')
-    style.configure('TText', foreground='#454441', background='#444444', font=('Poppins', 12))
+    style.configure('TFrame', background='#15061c')
+    style.configure('TText', foreground='#454441', background='#15061c', font=('Poppins', 12))
 
     # Create a frame for the command line
     command_frame = ttk.Frame(root)
